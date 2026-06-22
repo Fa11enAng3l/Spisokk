@@ -5,131 +5,167 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Мой WatchList</title>
     <style>
-        :root { --bg-color: #0d0a15; --card-bg: rgba(30, 20, 45, 0.7); --emerald: #00e676; --purple: #9d4edd; }
-        body { margin: 0; padding: 20px; font-family: sans-serif; background: linear-gradient(135deg, #1a0b2e, #000); color: #fff; display: flex; flex-direction: column; align-items: center; }
+        :root {
+            --bg-color: #0d0a15;
+            --emerald: #00e676;
+            --purple: #9d4edd;
+            --card-bg: rgba(30, 20, 45, 0.7);
+        }
+
+        body { 
+            margin: 0; padding: 20px; font-family: sans-serif; 
+            background: var(--bg-color); color: #fff; 
+            display: flex; flex-direction: column; align-items: center;
+            transition: background 0.3s;
+        }
+
         .container { max-width: 600px; width: 100%; }
-        .category-block { background: var(--card-bg); backdrop-filter: blur(10px); padding: 20px; border-radius: 15px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.1); }
-        h2 { color: var(--emerald); border-left: 4px solid var(--purple); padding-left: 10px; margin-top: 0;}
-        .item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); gap: 5px; }
+
+        /* Неоновый заголовок */
+        h1 { 
+            text-align: center; color: #fff; font-size: 3rem; margin: 20px 0;
+            text-transform: uppercase; letter-spacing: 5px;
+            text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px var(--emerald), 0 0 40px var(--emerald);
+        }
+
+        /* Настройки */
+        .settings-block { background: var(--card-bg); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid var(--emerald); }
+        .settings-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+
+        /* Список с нумерацией */
+        .category-block { 
+            background: var(--card-bg); backdrop-filter: blur(10px); 
+            padding: 20px; border-radius: 15px; margin-bottom: 25px; 
+            border: 1px solid rgba(255,255,255,0.1);
+            counter-reset: item; /* Запуск счетчика */
+        }
+
+        h2 { color: var(--emerald); border-left: 4px solid var(--purple); padding-left: 10px; }
+
+        .item { 
+            display: flex; align-items: center; justify-content: space-between; 
+            padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); gap: 10px;
+            counter-increment: item; /* Увеличение счетчика */
+        }
+        
+        .item::before { content: counter(item) ". "; color: var(--emerald); font-weight: bold; }
         .item-text { cursor: pointer; flex-grow: 1; }
-        .actions { display: flex; gap: 5px; }
-        button { background: transparent; border: 1px solid var(--emerald); color: var(--emerald); padding: 5px 8px; border-radius: 5px; cursor: pointer; font-size: 12px; }
+
+        /* Кнопки и цвета */
+        button { background: transparent; border: 1px solid var(--emerald); color: var(--emerald); padding: 5px 8px; border-radius: 5px; cursor: pointer; }
         button.delete { border-color: #ff5252; color: #ff5252; }
         button:hover { background: var(--emerald); color: #000; }
         button.delete:hover { background: #ff5252; color: #fff; }
-        input { flex-grow: 1; padding: 5px; border-radius: 5px; border: none; background: rgba(255,255,255,0.1); color: #fff; }
-        .input-group { display: flex; gap: 5px; margin-top: 15px; }
-        .add-btn { background: var(--emerald); border: none; color: #000; font-weight: bold; padding: 5px 15px; }
+
+        input { padding: 5px; border-radius: 5px; border: none; background: rgba(255,255,255,0.1); color: #fff; }
+        .add-btn { background: var(--emerald); border: none; color: #000; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="container" id="app"></div>
+    <div class="container">
+        <h1>WatchList</h1>
+        
+        <div class="settings-block">
+            <h3>⚙️ Настройки</h3>
+            <div class="settings-row">
+                Фон: <input type="color" id="bgPicker" onchange="updateColors()">
+                Кнопки: <input type="color" id="btnPicker" onchange="updateColors()">
+            </div>
+        </div>
+
+        <div id="app"></div>
+    </div>
 
     <script>
         const initialData = {
-            "Фильмы": [
-                "Z – значит Захария (2015)", "Назад в будущее 3", "Трасса 60", "Час пик 1/2/3/4", "Полтора шпиона", 
-                "Живая сталь", "Kingsman: Секретная служба (2015)", "Kingsman: Золотое кольцо (2017)", 
-                "King’s Man: Начало (2021)", "Иллюзия обмана 2 (2016)", "Иллюзия обмана 3 (2025)", "Брюс Всемогущий", 
-                "Лего. Фильм(просмотрено)", "Интерстеллар", "Рио (1/2)(пересмотреть)", "Добро пожаловать в Zомбилэнд (2009)", 
-                "Zомбилэнд: Контрольный выстрел (2019)", "Искусство самообороны", "Меню", "Всё могу (2015)", 
-                "Изобретение лжи (2009)", "Всегда говори «ДА» (2008)", "Лжец, лжец (1997)", "Мост в Терабитию(2007)", 
-                "Идеальные дни", "Семь", "Драйв", "Отрыв", "Бесславные ублюдки", "Быстрее пули", "Малыш на драйве", 
-                "Несносные боссы", "Остров проклятых", "Волк с уолк-стрит", "Разрушение", "Одержимость", "Бетмен(2022)", 
-                "Spawn", "Миллион способов умереть на диком западе"
-            ],
-            "Аниме": [
-                "Предсмертный список зомби", "Кулинарные поединки Сомы(досмотреть)", "Токийский Гуль: Перерождение(досмотреть)", 
-                "Бездомный бог", "Иная", "Гачиакута", "Дневник будущего", "Пожарная бригада", "(Смотреть после пожарной бригады) Soul eater", 
-                "5 сантиметров в секунду", "Хочу съесть твою поджелудочную", "Евангелион", "Форма голоса", "Тонель в лето", 
-                "Тетрадь смерти", "Рагна богровый", "Резеро жизнь с нуля", "Магическая битва", "Моб психо сто", 
-                "Ванпанчмен (1,2 сезон, 3 залупа)", "Адский рай(досмотреть 2 сезон)", "Человек бензопила", "Коносуба", "Ковбой бибоп", 
-                "Завтрашний Джо", "Черный клевер", "Go Go Loser ranger", "Врата энштейна", "Кровавый парень", 
-                "Школьный учитель Онидзука!", "Восхождение в тени", "Darker than Black", 
-                "Плод Грисаи (2014, 13 эп. + спэшлы)", "Лабиринт Грисаи (2015, фильм/спэшл)", "Рай Грисаи (2015, 10 эп. + спэшлы)", 
-                "Шарлотта", "Паразит", "Темнее черного", "Certain magical index", "Би: Начало", "Нет игры, нет жизни", 
-                "Одинокий рокер", "Код гиас", "Самурай чамплу"
-            ],
-            "Сериалы": [
-                "Пацаны(просмотрено)", "Флеш(досмотреть)", "Бесстыжие", "Уэйн", "Орвилл (сериал 2017 – 2022)"
-            ]
+            "Фильмы": ["Z – значит Захария", "Назад в будущее 3", "Трасса 60", "Интерстеллар"],
+            "Аниме": ["Тетрадь смерти", "Человек-бензопила", "Код гиас"],
+            "Сериалы": ["Пацаны", "Флеш", "Бесстыжие"]
         };
 
-        function loadData() {
-            const saved = localStorage.getItem('myWatchlist');
-            return saved ? JSON.parse(saved) : initialData;
-        }
-
-        function saveData(data) {
-            localStorage.setItem('myWatchlist', JSON.stringify(data));
-            render();
-        }
-
-        function addItem(category) {
-            const input = document.getElementById(`input-${category}`);
-            if (input.value.trim() === "") return;
-            const data = loadData();
-            data[category].push(input.value);
-            saveData(data);
-        }
-
-        function deleteItem(category, index) {
-            const data = loadData();
-            data[category].splice(index, 1);
-            saveData(data);
-        }
-
-        function editItem(category, index) {
-            const itemElement = document.getElementById(`item-${category}-${index}`);
-            const currentText = itemElement.querySelector('.item-text').innerText;
+        // Загрузка настроек
+        function applyStoredSettings() {
+            const savedBg = localStorage.getItem('bgColor') || '#0d0a15';
+            const savedBtn = localStorage.getItem('btnColor') || '#00e676';
             
-            itemElement.innerHTML = `
-                <input type="text" id="edit-${category}-${index}" value="${currentText}">
-                <button onclick="saveEdit('${category}', ${index})">Сохранить</button>
-            `;
+            document.documentElement.style.setProperty('--bg-color', savedBg);
+            document.documentElement.style.setProperty('--emerald', savedBtn);
+            
+            document.getElementById('bgPicker').value = savedBg;
+            document.getElementById('btnPicker').value = savedBtn;
         }
 
-        function saveEdit(category, index) {
-            const newValue = document.getElementById(`edit-${category}-${index}`).value;
+        function updateColors() {
+            const bg = document.getElementById('bgPicker').value;
+            const btn = document.getElementById('btnPicker').value;
+            
+            document.documentElement.style.setProperty('--bg-color', bg);
+            document.documentElement.style.setProperty('--emerald', btn);
+            
+            localStorage.setItem('bgColor', bg);
+            localStorage.setItem('btnColor', btn);
+        }
+
+        // Логика списка
+        function loadData() { return JSON.parse(localStorage.getItem('myWatchlist')) || initialData; }
+        function saveData(data) { localStorage.setItem('myWatchlist', JSON.stringify(data)); render(); }
+
+        function addItem(cat) {
+            const input = document.getElementById(`input-${cat}`);
+            if (!input.value) return;
             const data = loadData();
-            data[category][index] = newValue;
+            data[cat].push(input.value);
             saveData(data);
+        }
+
+        function deleteItem(cat, idx) {
+            const data = loadData();
+            data[cat].splice(idx, 1);
+            saveData(data);
+        }
+
+        function editItem(cat, idx) {
+            const text = document.getElementById(`item-${cat}-${idx}`).querySelector('.item-text').innerText;
+            const newText = prompt("Редактировать:", text);
+            if (newText !== null) {
+                const data = loadData();
+                data[cat][idx] = newText;
+                saveData(data);
+            }
         }
 
         function render() {
             const app = document.getElementById('app');
             const data = loadData();
-            app.innerHTML = '<h1>WatchList</h1>';
+            app.innerHTML = '';
             
             Object.keys(data).forEach(cat => {
                 const section = document.createElement('div');
                 section.className = 'category-block';
                 section.innerHTML = `<h2>${cat}</h2>`;
                 
-                data[cat].forEach((item, index) => {
-                    const div = document.createElement('div');
-                    div.className = 'item';
-                    div.id = `item-${cat}-${index}`;
-                    div.innerHTML = `
-                        <span class="item-text">${item}</span>
-                        <div class="actions">
-                            <button onclick="editItem('${cat}', ${index})">Изменить</button>
-                            <button class="delete" onclick="deleteItem('${cat}', ${index})">Удалить</button>
-                        </div>
-                    `;
-                    section.appendChild(div);
+                data[cat].forEach((item, idx) => {
+                    section.innerHTML += `
+                        <div class="item" id="item-${cat}-${idx}">
+                            <span class="item-text">${item}</span>
+                            <div>
+                                <button onclick="editItem('${cat}', ${idx})">✏️</button>
+                                <button class="delete" onclick="deleteItem('${cat}', ${idx})">🗑️</button>
+                            </div>
+                        </div>`;
                 });
-
+                
                 section.innerHTML += `
-                    <div class="input-group">
-                        <input type="text" id="input-${cat}" placeholder="Добавить новое...">
+                    <div style="margin-top:15px; display:flex; gap:5px;">
+                        <input type="text" id="input-${cat}" placeholder="Добавить...">
                         <button class="add-btn" onclick="addItem('${cat}')">+</button>
-                    </div>
-                `;
+                    </div>`;
                 app.appendChild(section);
             });
         }
 
+        // Инициализация
+        applyStoredSettings();
         render();
     </script>
 </body>
