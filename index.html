@@ -9,20 +9,21 @@
         body { margin: 0; padding: 20px; font-family: sans-serif; background: linear-gradient(135deg, #1a0b2e, #000); color: #fff; display: flex; flex-direction: column; align-items: center; }
         .container { max-width: 600px; width: 100%; }
         .category-block { background: var(--card-bg); backdrop-filter: blur(10px); padding: 20px; border-radius: 15px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.1); }
-        h2 { color: var(--emerald); border-left: 4px solid var(--purple); padding-left: 10px; }
-        .item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .item-text { cursor: pointer; flex-grow: 1; margin-right: 10px; }
-        button { background: transparent; border: 1px solid #ff5252; color: #ff5252; padding: 5px 8px; border-radius: 5px; cursor: pointer; font-size: 12px; }
-        button:hover { background: #ff5252; color: #fff; }
+        h2 { color: var(--emerald); border-left: 4px solid var(--purple); padding-left: 10px; margin-top: 0;}
+        .item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); gap: 5px; }
+        .item-text { cursor: pointer; flex-grow: 1; }
+        .actions { display: flex; gap: 5px; }
+        button { background: transparent; border: 1px solid var(--emerald); color: var(--emerald); padding: 5px 8px; border-radius: 5px; cursor: pointer; font-size: 12px; }
+        button.delete { border-color: #ff5252; color: #ff5252; }
+        button:hover { background: var(--emerald); color: #000; }
+        button.delete:hover { background: #ff5252; color: #fff; }
+        input { flex-grow: 1; padding: 5px; border-radius: 5px; border: none; background: rgba(255,255,255,0.1); color: #fff; }
         .input-group { display: flex; gap: 5px; margin-top: 15px; }
-        input { flex-grow: 1; padding: 8px; border-radius: 5px; border: none; background: rgba(255,255,255,0.1); color: #fff; }
         .add-btn { background: var(--emerald); border: none; color: #000; font-weight: bold; padding: 5px 15px; }
     </style>
 </head>
 <body>
-    <div class="container" id="app">
-        <h1>WatchList</h1>
-    </div>
+    <div class="container" id="app"></div>
 
     <script>
         const initialData = {
@@ -69,13 +70,29 @@
             if (input.value.trim() === "") return;
             const data = loadData();
             data[category].push(input.value);
-            input.value = "";
             saveData(data);
         }
 
         function deleteItem(category, index) {
             const data = loadData();
             data[category].splice(index, 1);
+            saveData(data);
+        }
+
+        function editItem(category, index) {
+            const itemElement = document.getElementById(`item-${category}-${index}`);
+            const currentText = itemElement.querySelector('.item-text').innerText;
+            
+            itemElement.innerHTML = `
+                <input type="text" id="edit-${category}-${index}" value="${currentText}">
+                <button onclick="saveEdit('${category}', ${index})">Сохранить</button>
+            `;
+        }
+
+        function saveEdit(category, index) {
+            const newValue = document.getElementById(`edit-${category}-${index}`).value;
+            const data = loadData();
+            data[category][index] = newValue;
             saveData(data);
         }
 
@@ -92,9 +109,13 @@
                 data[cat].forEach((item, index) => {
                     const div = document.createElement('div');
                     div.className = 'item';
+                    div.id = `item-${cat}-${index}`;
                     div.innerHTML = `
                         <span class="item-text">${item}</span>
-                        <button onclick="deleteItem('${cat}', ${index})">Удалить</button>
+                        <div class="actions">
+                            <button onclick="editItem('${cat}', ${index})">Изменить</button>
+                            <button class="delete" onclick="deleteItem('${cat}', ${index})">Удалить</button>
+                        </div>
                     `;
                     section.appendChild(div);
                 });
