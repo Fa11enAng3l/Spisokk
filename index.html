@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мой WatchList</title>
+    <style>
+        :root { --bg-color: #0d0a15; --card-bg: rgba(30, 20, 45, 0.7); --emerald: #00e676; --purple: #9d4edd; }
+        body { margin: 0; padding: 20px; font-family: sans-serif; background: linear-gradient(135deg, #1a0b2e, #000); color: #fff; display: flex; flex-direction: column; align-items: center; }
+        .container { max-width: 600px; width: 100%; }
+        .category-block { background: var(--card-bg); backdrop-filter: blur(10px); padding: 20px; border-radius: 15px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.1); }
+        h2 { color: var(--emerald); border-left: 4px solid var(--purple); padding-left: 10px; }
+        .item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .item-text { cursor: pointer; flex-grow: 1; }
+        .watched { text-decoration: line-through; opacity: 0.5; }
+        button { background: transparent; border: 1px solid var(--emerald); color: var(--emerald); padding: 5px 10px; border-radius: 5px; cursor: pointer; }
+        button:hover { background: var(--emerald); color: #000; }
+        .input-group { display: flex; gap: 5px; margin-top: 10px; }
+        input { flex-grow: 1; padding: 8px; border-radius: 5px; border: none; background: rgba(255,255,255,0.1); color: #fff; }
+    </style>
+</head>
+<body>
+    <div class="container" id="app">
+        <h1>WatchList</h1>
+    </div>
+
+    <script>
+        const initialData = {
+            "Фильмы": ["Назад в будущее 3", "Интерстеллар"],
+            "Аниме": ["Тетрадь смерти", "Человек-бензопила"],
+            "Сериалы": ["Пацаны", "Бесстыжие"]
+        };
+
+        function loadData() {
+            return JSON.parse(localStorage.getItem('myWatchlist')) || initialData;
+        }
+
+        function saveData(data) {
+            localStorage.setItem('myWatchlist', JSON.stringify(data));
+            render();
+        }
+
+        function addItem(category) {
+            const input = document.getElementById(`input-${category}`);
+            if (input.value.trim() === "") return;
+            const data = loadData();
+            data[category].push(input.value);
+            input.value = "";
+            saveData(data);
+        }
+
+        function deleteItem(category, index) {
+            const data = loadData();
+            data[category].splice(index, 1);
+            saveData(data);
+        }
+
+        function render() {
+            const app = document.getElementById('app');
+            const data = loadData();
+            app.innerHTML = '<h1>WatchList</h1>';
+            
+            Object.keys(data).forEach(cat => {
+                const section = document.createElement('div');
+                section.className = 'category-block';
+                section.innerHTML = `<h2>${cat}</h2>`;
+                
+                data[cat].forEach((item, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'item';
+                    div.innerHTML = `
+                        <span class="item-text">${item}</span>
+                        <button onclick="deleteItem('${cat}', ${index})">Удалить</button>
+                    `;
+                    section.appendChild(div);
+                });
+
+                section.innerHTML += `
+                    <div class="input-group">
+                        <input type="text" id="input-${cat}" placeholder="Добавить...">
+                        <button onclick="addItem('${cat}')">+</button>
+                    </div>
+                `;
+                app.appendChild(section);
+            });
+        }
+
+        render();
+    </script>
+</body>
+</html>
