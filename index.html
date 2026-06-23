@@ -1,4 +1,4 @@
-[23.06.2026 6:23] fa11enAngel: <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -33,7 +33,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>WATCHLIST</h1>
+        <h1>MY WATCHLIST WITH MY GF</h1>
         
         <div class="settings-panel">
             <div class="setting-item">Фон: <input type="color" id="bgPicker" onchange="updateColors()"></div>
@@ -69,7 +69,7 @@
             const accent = document.getElementById('accentPicker').value;
             db.collection("watchlist").doc("myList").update({ settings: { bg, accent } });
         }
-[23.06.2026 6:23] fa11enAngel: db.collection("watchlist").doc("myList").onSnapshot(doc => {
+db.collection("watchlist").doc("myList").onSnapshot(doc => {
             const data = doc.data();
             if (!data) return;
             const settings = data.settings  { bg: '#0d0a15', accent: '#00e676' };
