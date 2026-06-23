@@ -3,27 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WatchList</title>
+    <title>WatchList Pro</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    
     <style>
-        :root { --bg-color: #0d0a15; --emerald: #00e676; --purple: #9d4edd; --card-bg: rgba(30, 20, 45, 0.7); }
-        body { margin: 0; padding: 20px; font-family: sans-serif; background: var(--bg-color); color: #fff; display: flex; flex-direction: column; align-items: center; }
+        :root { --bg: #0d0a15; --card: #1a1525; --accent: #00e676; --edit: #448aff; --del: #ff5252; }
+        body { margin: 0; padding: 20px; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; display: flex; flex-direction: column; align-items: center; }
         .container { max-width: 600px; width: 100%; }
-        h1 { text-align: center; color: #fff; font-size: 2.5rem; text-transform: uppercase; letter-spacing: 5px; text-shadow: 0 0 10px var(--emerald); margin-bottom: 20px; }
-        .category-block { background: var(--card-bg); padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
-        h2 { color: var(--emerald); }
-        .item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        button { background: transparent; border: 1px solid var(--emerald); color: var(--emerald); padding: 4px 8px; border-radius: 4px; cursor: pointer; }
-        button.delete { border-color: #ff5252; color: #ff5252; }
-        input { padding: 8px; border-radius: 5px; border: none; background: rgba(255,255,255,0.1); color: #fff; width: 100%; margin-bottom: 10px; }
-        .add-btn { background: var(--emerald); color: #000; font-weight: bold; width: 100%; border: none; }
+        h1 { text-align: center; font-size: 2rem; color: var(--accent); letter-spacing: 2px; }
+        .category-block { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        h2 { border-bottom: 2px solid var(--accent); padding-bottom: 5px; font-size: 1.2rem; }
+        .item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #333; }
+        .btn-group { display: flex; gap: 5px; }
+        button { cursor: pointer; padding: 5px 10px; border-radius: 4px; border: none; font-size: 0.8rem; font-weight: bold; }
+        .edit-btn { background: var(--edit); color: white; }
+        .del-btn { background: var(--del); color: white; }
+        input { padding: 10px; width: calc(100% - 22px); border-radius: 6px; border: none; background: #2a2535; color: white; margin-top: 10px; }
+        .add-btn { background: var(--accent); color: #000; width: 100%; margin-top: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>WatchList</h1>
+        <h1>WATCHLIST</h1>
         <div id="app">Загрузка данных...</div>
     </div>
 
@@ -36,7 +37,6 @@
             messagingSenderId: "410347694098",
             appId: "1:410347694098:web:3539875f65d638a5f790cb"
         };
-
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
@@ -51,40 +51,40 @@
                     list.map((item, idx) => `
                         <div class="item">
                             <span>${item}</span>
-                            <button class="delete" onclick="deleteItem('${cat}', ${idx})">Удалить</button>
+                            <div class="btn-group">
+                                <button class="edit-btn" onclick="editItem('${cat}', ${idx}, '${item.replace(/'/g, "\\'")}')">Изменить</button>
+                                <button class="del-btn" onclick="deleteItem('${cat}', ${idx})">Удалить</button>
+                            </div>
                         </div>`).join('') +
-                    `<input type="text" id="input-${cat}" placeholder="Добавить...">
-                     <button class="add-btn" onclick="addItem('${cat}')">Добавить в ${cat}</button>`;
+                    `<input type="text" id="input-${cat}" placeholder="Добавить название...">
+                     <button class="add-btn" onclick="addItem('${cat}')">Добавить</button>`;
                 app.appendChild(section);
             });
         }
 
-        db.collection("watchlist").doc("myList").onSnapshot((doc) => {
-            if (doc.exists) {
-                render(doc.data());
-            } else {
-                // Если пусто, создаем структуру
-                db.collection("watchlist").doc("myList").set({
-                    "Фильмы": [], "Аниме": [], "Сериалы": []
-                });
-            }
-        });
+        db.collection("watchlist").doc("myList").onSnapshot(doc => { if(doc.exists) render(doc.data()); });
 
         function addItem(cat) {
             const val = document.getElementById(`input-${cat}`).value;
             if (!val) return;
-            db.collection("watchlist").doc("myList").get().then(doc => {
-                const data = doc.data();
-                data[cat].push(val);
-                db.collection("watchlist").doc("myList").update(data);
-            });
+            db.collection("watchlist").doc("myList").update({ [cat]: firebase.firestore.FieldValue.arrayUnion(val) });
         }
 
         function deleteItem(cat, idx) {
             db.collection("watchlist").doc("myList").get().then(doc => {
                 const data = doc.data();
                 data[cat].splice(idx, 1);
-                db.collection("watchlist").doc("myList").update(data);
+                db.collection("watchlist").doc("myList").update({ [cat]: data[cat] });
+            });
+        }
+
+        function editItem(cat, idx, oldVal) {
+            const newVal = prompt("Изменить название:", oldVal);
+            if (!newVal) return;
+            db.collection("watchlist").doc("myList").get().then(doc => {
+                const data = doc.data();
+                data[cat][idx] = newVal;
+                db.collection("watchlist").doc("myList").update({ [cat]: data[cat] });
             });
         }
     </script>
