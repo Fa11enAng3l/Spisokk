@@ -8,23 +8,35 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <style>
         :root { --bg: #0d0a15; --card: #1a1525; --accent: #00e676; --edit: #448aff; --del: #ff5252; }
-        body { margin: 0; padding: 20px; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; display: flex; flex-direction: column; align-items: center; }
-        .container { max-width: 600px; width: 100%; }
-        h1 { text-align: center; font-size: 2rem; color: var(--accent); letter-spacing: 2px; }
-        .category-block { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
-        h2 { border-bottom: 2px solid var(--accent); padding-bottom: 5px; font-size: 1.2rem; }
+        body { margin: 0; padding: 20px; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; transition: background 0.3s; }
+        .container { max-width: 600px; margin: 0 auto; }
+        
+        /* Панель настроек */
+        .settings-panel { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; gap: 20px; align-items: center; justify-content: center; }
+        .setting-item { display: flex; align-items: center; gap: 10px; }
+        input[type="color"] { border: none; width: 40px; height: 40px; cursor: pointer; background: none; }
+
+        h1 { text-align: center; color: var(--accent); }
+        .category-block { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; }
+        h2 { border-bottom: 2px solid var(--accent); padding-bottom: 5px; color: var(--accent); }
         .item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #333; }
         .btn-group { display: flex; gap: 5px; }
-        button { cursor: pointer; padding: 5px 10px; border-radius: 4px; border: none; font-size: 0.8rem; font-weight: bold; }
+        button { cursor: pointer; padding: 5px 10px; border-radius: 4px; border: none; font-weight: bold; }
         .edit-btn { background: var(--edit); color: white; }
         .del-btn { background: var(--del); color: white; }
-        input { padding: 10px; width: calc(100% - 22px); border-radius: 6px; border: none; background: #2a2535; color: white; margin-top: 10px; }
-        .add-btn { background: var(--accent); color: #000; width: 100%; margin-top: 5px; font-weight: bold; }
+        input[type="text"] { padding: 10px; width: calc(100% - 22px); border-radius: 6px; border: none; background: #2a2535; color: white; margin-top: 10px; }
+        .add-btn { background: var(--accent); color: #000; width: 100%; margin-top: 5px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>WATCHLIST</h1>
+        
+        <div class="settings-panel">
+            <div class="setting-item">Фон: <input type="color" id="bgPicker" onchange="updateColors()"></div>
+            <div class="setting-item">Акцент: <input type="color" id="accentPicker" onchange="updateColors()"></div>
+        </div>
+
         <div id="app">Загрузка данных...</div>
     </div>
 
@@ -39,6 +51,29 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+        const docRef = db.collection("watchlist").doc("myList");
+
+        function applyColors(bg, accent) {
+            document.documentElement.style.setProperty('--bg', bg);
+            document.documentElement.style.setProperty('--card', bg === '#0d0a15' ? '#1a1525' : '#222');
+            document.documentElement.style.setProperty('--accent', accent);
+            document.getElementById('bgPicker').value = bg;
+            document.getElementById('accentPicker').value = accent;
+        }
+
+        function updateColors() {
+            const bg = document.getElementById('bgPicker').value;
+            const accent = document.getElementById('accentPicker').value;
+            db.collection("watchlist").doc("myList").update({ settings: { bg, accent } });
+        }
+
+        db.collection("watchlist").doc("myList").onSnapshot(doc => {
+            const data = doc.data();
+            if (!data) return;
+            const settings = data.settings || { bg: '#0d0a15', accent: '#00e676' };
+            applyColors(settings.bg, settings.accent);
+            render(data);
+        });
 
         function render(data) {
             const app = document.getElementById('app');
@@ -56,20 +91,18 @@
                                 <button class="del-btn" onclick="deleteItem('${cat}', ${idx})">Удалить</button>
                             </div>
                         </div>`).join('') +
-                    `<input type="text" id="input-${cat}" placeholder="Добавить название...">
+                    `<input type="text" id="input-${cat}" placeholder="Добавить...">
                      <button class="add-btn" onclick="addItem('${cat}')">Добавить</button>`;
                 app.appendChild(section);
             });
         }
 
-        db.collection("watchlist").doc("myList").onSnapshot(doc => { if(doc.exists) render(doc.data()); });
-
+        // Функции CRUD (без изменений, кроме удаления старого)
         function addItem(cat) {
             const val = document.getElementById(`input-${cat}`).value;
             if (!val) return;
             db.collection("watchlist").doc("myList").update({ [cat]: firebase.firestore.FieldValue.arrayUnion(val) });
         }
-
         function deleteItem(cat, idx) {
             db.collection("watchlist").doc("myList").get().then(doc => {
                 const data = doc.data();
@@ -77,9 +110,8 @@
                 db.collection("watchlist").doc("myList").update({ [cat]: data[cat] });
             });
         }
-
         function editItem(cat, idx, oldVal) {
-            const newVal = prompt("Изменить название:", oldVal);
+            const newVal = prompt("Изменить:", oldVal);
             if (!newVal) return;
             db.collection("watchlist").doc("myList").get().then(doc => {
                 const data = doc.data();
