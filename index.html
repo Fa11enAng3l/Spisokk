@@ -13,52 +13,56 @@
         }
 
         body { 
-            margin: 0; padding: 20px; font-family: sans-serif; 
+            margin: 0; padding: 15px; font-family: sans-serif; 
             background: var(--bg-color); color: #fff; 
             display: flex; flex-direction: column; align-items: center;
-            transition: background 0.3s;
         }
 
         .container { max-width: 600px; width: 100%; }
 
-        /* Неоновый заголовок */
         h1 { 
-            text-align: center; color: #fff; font-size: 3rem; margin: 20px 0;
-            text-transform: uppercase; letter-spacing: 5px;
-            text-shadow: 0 0 10px #fff, 0 0 20px #fff, 0 0 30px var(--emerald), 0 0 40px var(--emerald);
+            text-align: center; color: #fff; font-size: 2rem; margin: 20px 0;
+            text-transform: uppercase; letter-spacing: 3px;
+            text-shadow: 0 0 10px #fff, 0 0 20px var(--emerald);
         }
 
-        /* Настройки */
         .settings-block { background: var(--card-bg); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid var(--emerald); }
-        .settings-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-
-        /* Список с нумерацией */
+        
         .category-block { 
             background: var(--card-bg); backdrop-filter: blur(10px); 
-            padding: 20px; border-radius: 15px; margin-bottom: 25px; 
+            padding: 15px; border-radius: 15px; margin-bottom: 20px; 
             border: 1px solid rgba(255,255,255,0.1);
             counter-reset: item;
         }
 
-        h2 { color: var(--emerald); border-left: 4px solid var(--purple); padding-left: 10px; }
+        h2 { color: var(--emerald); border-left: 4px solid var(--purple); padding-left: 10px; margin-top: 0; }
 
         .item { 
-            display: flex; align-items: center; justify-content: space-between; 
-            padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); gap: 10px;
+            display: flex; align-items: flex-start; justify-content: space-between; 
+            padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); gap: 10px;
             counter-increment: item;
         }
         
-        .item::before { content: counter(item) ". "; color: var(--emerald); font-weight: bold; }
-        .item-text { cursor: pointer; flex-grow: 1; }
+        .item::before { content: counter(item) ". "; color: var(--emerald); font-weight: bold; flex-shrink: 0; }
+        .item-text { flex-grow: 1; word-break: break-word; }
 
-        /* Кнопки и цвета */
-        button { background: transparent; border: 1px solid var(--emerald); color: var(--emerald); padding: 5px 8px; border-radius: 5px; cursor: pointer; }
+        /* Блок кнопок */
+        .actions { 
+            display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; 
+        }
+
+        button { 
+            background: transparent; border: 1px solid var(--emerald); 
+            color: var(--emerald); padding: 4px 8px; border-radius: 4px; 
+            cursor: pointer; font-size: 12px; font-weight: bold;
+        }
         button.delete { border-color: #ff5252; color: #ff5252; }
+        
         button:hover { background: var(--emerald); color: #000; }
         button.delete:hover { background: #ff5252; color: #fff; }
 
-        input { padding: 5px; border-radius: 5px; border: none; background: rgba(255,255,255,0.1); color: #fff; }
-        .add-btn { background: var(--emerald); border: none; color: #000; font-weight: bold; }
+        input { padding: 8px; border-radius: 5px; border: none; background: rgba(255,255,255,0.1); color: #fff; width: 100%; box-sizing: border-box; }
+        .add-btn { background: var(--emerald); border: none; color: #000; font-weight: bold; width: auto; padding: 0 15px; }
     </style>
 </head>
 <body>
@@ -67,9 +71,9 @@
         
         <div class="settings-block">
             <h3>⚙️ Настройки</h3>
-            <div class="settings-row">
-                Фон: <input type="color" id="bgPicker" onchange="updateColors()">
-                Кнопки: <input type="color" id="btnPicker" onchange="updateColors()">
+            <div style="display:flex; gap:15px;">
+                Фон: <input type="color" id="bgPicker" onchange="updateColors()" style="width: 50px;">
+                Кнопки: <input type="color" id="btnPicker" onchange="updateColors()" style="width: 50px;">
             </div>
         </div>
 
@@ -168,16 +172,16 @@
                     section.innerHTML += `
                         <div class="item" id="item-${cat}-${idx}">
                             <span class="item-text">${item}</span>
-                            <div>
-                                <button onclick="editItem('${cat}', ${idx})">✏️</button>
-                                <button class="delete" onclick="deleteItem('${cat}', ${idx})">🗑️</button>
+                            <div class="actions">
+                                <button onclick="editItem('${cat}', ${idx})">Изменить</button>
+                                <button class="delete" onclick="deleteItem('${cat}', ${idx})">Удалить</button>
                             </div>
                         </div>`;
                 });
                 
                 section.innerHTML += `
                     <div style="margin-top:15px; display:flex; gap:5px;">
-                        <input type="text" id="input-${cat}" placeholder="Добавить новое...">
+                        <input type="text" id="input-${cat}" placeholder="Добавить...">
                         <button class="add-btn" onclick="addItem('${cat}')">+</button>
                     </div>`;
                 app.appendChild(section);
