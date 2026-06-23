@@ -58,8 +58,10 @@
             document.documentElement.style.setProperty('--bg', bg);
             document.documentElement.style.setProperty('--card', bg === '#0d0a15' ? '#1a1525' : '#222');
             document.documentElement.style.setProperty('--accent', accent);
-            if(document.getElementById('bgPicker')) document.getElementById('bgPicker').value = bg;
-            if(document.getElementById('accentPicker')) document.getElementById('accentPicker').value = accent;
+            const bgPicker = document.getElementById('bgPicker');
+            const accentPicker = document.getElementById('accentPicker');
+            if(bgPicker) bgPicker.value = bg;
+            if(accentPicker) accentPicker.value = accent;
         }
 
         function updateColors() {
@@ -88,7 +90,7 @@
                         <div class="item">
                             <span class="item-text">${idx + 1}. ${item}</span>
                             <div class="btn-group">
-                                <button class="edit-btn" onclick="editItem('${cat}', ${idx}, '${item.replace(/'/g, "\\'")}')">Изменить</button>
+                                <button class="edit-btn" onclick="editItem('${cat}', ${idx}, '${String(item || "").replace(/'/g, "\\'")}')">Изменить</button>
                                 <button class="del-btn" onclick="deleteItem('${cat}', ${idx})">Удалить</button>
                             </div>
                         </div>`).join('') +
