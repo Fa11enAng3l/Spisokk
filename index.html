@@ -2,33 +2,46 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WatchList Pro</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <style>
         :root { --bg: #0d0a15; --card: #1a1525; --accent: #00e676; --edit: #448aff; --del: #ff5252; }
-        body { margin: 0; padding: 20px; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; }
+        body { margin: 0; padding: 20px; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; transition: background 0.3s; }
         .container { max-width: 600px; margin: 0 auto; }
-        .search-box { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 8px; border: none; background: #2a2535; color: white; box-sizing: border-box; }
+        .settings-panel, .search-panel { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; justify-content: center; }
+        input[type="color"] { border: none; width: 40px; height: 40px; cursor: pointer; background: none; }
+        input[type="text"] { padding: 10px; width: 100%; border-radius: 6px; border: none; background: #2a2535; color: white; }
+        h1 { text-align: center; color: var(--accent); }
         .category-block { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; }
-        .item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #333; gap: 10px; }
-        .item-text { flex-grow: 1; transition: opacity 0.3s; }
-        .watched { opacity: 0.5; text-decoration: line-through; }
+        h2 { border-bottom: 2px solid var(--accent); padding-bottom: 5px; color: var(--accent); }
+        .item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #333; }
+        .item-info { display: flex; align-items: center; gap: 10px; flex-grow: 1; }
+        .watched { text-decoration: line-through; opacity: 0.6; }
         .btn-group { display: flex; gap: 5px; }
-        button { cursor: pointer; padding: 4px 8px; border-radius: 4px; border: none; font-size: 12px; }
+        button { cursor: pointer; padding: 5px 10px; border-radius: 4px; border: none; font-weight: bold; }
+        .edit-btn { background: var(--edit); color: white; }
         .del-btn { background: var(--del); color: white; }
+        .add-btn { background: var(--accent); color: #000; width: 100%; margin-top: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>WATCHLIST</h1>
-        <input type="text" id="searchInput" class="search-box" placeholder="🔍 Поиск по названию..." oninput="render()">
-        <div id="app">Загрузка...</div>
+        <div class="settings-panel">
+            Фон: <input type="color" id="bgPicker" onchange="updateColors()">
+            Акцент: <input type="color" id="accentPicker" onchange="updateColors()">
+        </div>
+        <div class="search-panel">
+            <input type="text" id="search" placeholder="🔍 Поиск по названию..." oninput="renderApp()">
+        </div>
+        <div id="app">Загрузка данных...</div>
     </div>
 
     <script>
         const firebaseConfig = {
-            apiKey: "ВАШ_API_KEY",
+            apiKey: "AIzaSyBTtkGKIVzdK9rk-9HqXBa9hYdzH-n7Dh0",
             authDomain: "watchlist-5c90e.firebaseapp.com",
             projectId: "watchlist-5c90e",
             storageBucket: "watchlist-5c90e.firebasestorage.app",
@@ -37,61 +50,84 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-
-        let currentData = {};
+        let cachedData = null;
 
         db.collection("watchlist").doc("myList").onSnapshot(doc => {
-            currentData = doc.exists ? doc.data() : {};
-            render();
+            if(doc.exists) { cachedData = doc.data(); renderApp(); }
         });
 
-        function render() {
+        function renderApp() {
+            if(!cachedData) return;
+            const query = document.getElementById('search').value.toLowerCase();
             const app = document.getElementById('app');
-            const query = document.getElementById('searchInput').value.toLowerCase();
             app.innerHTML = '';
             
+            applyColors(cachedData.settings?.bg || '#0d0a15', cachedData.settings?.accent || '#00e676');
+
             ["Фильмы", "Аниме", "Сериалы"].forEach(cat => {
-                const list = currentData[cat] || [];
-                const filtered = list.filter(item => (item.name || item).toLowerCase().includes(query));
-                
+                const list = cachedData[cat] || [];
                 const section = document.createElement('div');
                 section.className = 'category-block';
                 section.innerHTML = `<h2>${cat}</h2>` + 
-                    filtered.map((item, idx) => {
-                        const isObj = typeof item === 'object';
-                        const name = isObj ? item.name : item;
-                        const checked = isObj && item.watched ? 'checked' : '';
-                        const realIdx = list.indexOf(item); // Ищем реальный индекс в исходном списке
-                        
+                    list.map((item, idx) => {
+                        const obj = typeof item === 'string' ? { name: item, watched: false } : item;
+                        if (!obj.name.toLowerCase().includes(query)) return '';
                         return `
                         <div class="item">
-                            <input type="checkbox" ${checked} onchange="toggleWatched('${cat}', ${realIdx})">
-                            <span class="item-text ${checked ? 'watched' : ''}">${name}</span>
-                            <button class="del-btn" onclick="deleteItem('${cat}', ${realIdx})">X</button>
+                            <div class="item-info">
+                                <input type="checkbox" ${obj.watched ? 'checked' : ''} onchange="toggleWatched('${cat}', ${idx})">
+                                <span class="${obj.watched ? 'watched' : ''}">${idx + 1}. ${obj.name}</span>
+                            </div>
+                            <div class="btn-group">
+                                <button class="edit-btn" onclick="editItem('${cat}', ${idx}, '${obj.name.replace(/'/g, "\\'")}')">Изменить</button>
+                                <button class="del-btn" onclick="deleteItem('${cat}', ${idx})">Удалить</button>
+                            </div>
                         </div>`;
-                    }).join('');
+                    }).join('') +
+                    `<input type="text" id="input-${cat}" placeholder="Добавить...">
+                     <button class="add-btn" onclick="addItem('${cat}')">Добавить</button>`;
                 app.appendChild(section);
             });
         }
 
         function toggleWatched(cat, idx) {
-            db.collection("watchlist").doc("myList").get().then(doc => {
-                const data = doc.data();
-                let item = data[cat][idx];
-                // Превращаем старые строки в объекты при первом клике
-                if (typeof item === 'string') item = { name: item, watched: false };
-                item.watched = !item.watched;
-                data[cat][idx] = item;
-                db.collection("watchlist").doc("myList").update({ [cat]: data[cat] });
-            });
+            const list = [...cachedData[cat]];
+            const obj = typeof list[idx] === 'string' ? { name: list[idx], watched: false } : list[idx];
+            obj.watched = !obj.watched;
+            list[idx] = obj;
+            db.collection("watchlist").doc("myList").update({ [cat]: list });
         }
 
+        function applyColors(bg, accent) {
+            document.documentElement.style.setProperty('--bg', bg);
+            document.documentElement.style.setProperty('--card', bg === '#0d0a15' ? '#1a1525' : '#222');
+            document.documentElement.style.setProperty('--accent', accent);
+            document.getElementById('bgPicker').value = bg;
+            document.getElementById('accentPicker').value = accent;
+        }
+
+        function updateColors() {
+            db.collection("watchlist").doc("myList").update({ settings: { bg: document.getElementById('bgPicker').value, accent: document.getElementById('accentPicker').value } });
+        }
+
+        function addItem(cat) {
+            const val = document.getElementById(`input-${cat}`).value;
+            if (!val) return;
+            db.collection("watchlist").doc("myList").update({ [cat]: firebase.firestore.FieldValue.arrayUnion({ name: val, watched: false }) });
+        }
         function deleteItem(cat, idx) {
-            db.collection("watchlist").doc("myList").get().then(doc => {
-                const data = doc.data();
-                data[cat].splice(idx, 1);
-                db.collection("watchlist").doc("myList").update({ [cat]: data[cat] });
-            });
+            const list = [...cachedData[cat]];
+            list.splice(idx, 1);
+            db.collection("watchlist").doc("myList").update({ [cat]: list });
+        }
+        function editItem(cat, idx, oldVal) {
+            const newVal = prompt("Изменить название:", oldVal);
+            if (!newVal) return;
+            const list = [...cachedData[cat]];
+            const obj = typeof list[idx] === 'string' ? { name: list[idx], watched: false } : list[idx];
+            obj.name = newVal;
+            list[idx] = obj;
+            db.collection("watchlist").doc("myList").update({ [cat]: list });
         }
     </script>
 </body>
