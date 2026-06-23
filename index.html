@@ -37,7 +37,7 @@
             background: var(--card-bg); backdrop-filter: blur(10px); 
             padding: 20px; border-radius: 15px; margin-bottom: 25px; 
             border: 1px solid rgba(255,255,255,0.1);
-            counter-reset: item; /* Запуск счетчика */
+            counter-reset: item;
         }
 
         h2 { color: var(--emerald); border-left: 4px solid var(--purple); padding-left: 10px; }
@@ -45,7 +45,7 @@
         .item { 
             display: flex; align-items: center; justify-content: space-between; 
             padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.05); gap: 10px;
-            counter-increment: item; /* Увеличение счетчика */
+            counter-increment: item;
         }
         
         .item::before { content: counter(item) ". "; color: var(--emerald); font-weight: bold; }
@@ -78,19 +78,39 @@
 
     <script>
         const initialData = {
-            "Фильмы": ["Z – значит Захария", "Назад в будущее 3", "Трасса 60", "Интерстеллар"],
-            "Аниме": ["Тетрадь смерти", "Человек-бензопила", "Код гиас"],
-            "Сериалы": ["Пацаны", "Флеш", "Бесстыжие"]
+            "Фильмы": [
+                "Z – значит Захария (2015)", "Назад в будущее 3", "Трасса 60", "Час пик 1/2/3/4", "Полтора шпиона", 
+                "Живая сталь", "Kingsman: Секретная служба (2015)", "Kingsman: Золотое кольцо (2017)", 
+                "King’s Man: Начало (2021)", "Иллюзия обмана 2 (2016)", "Иллюзия обмана 3 (2025)", "Брюс Всемогущий", 
+                "Лего. Фильм(просмотрено)", "Интерстеллар", "Рио (1/2)(пересмотреть)", "Добро пожаловать в Zомбилэнд (2009)", 
+                "Zомбилэнд: Контрольный выстрел (2019)", "Искусство самообороны", "Меню", "Всё могу (2015)", 
+                "Изобретение лжи (2009)", "Всегда говори «ДА» (2008)", "Лжец, лжец (1997)", "Мост в Терабитию(2007)", 
+                "Идеальные дни", "Семь", "Драйв", "Отрыв", "Бесславные ублюдки", "Быстрее пули", "Малыш на драйве", 
+                "Несносные боссы", "Остров проклятых", "Волк с уолк-стрит", "Разрушение", "Одержимость", "Бетмен(2022)", 
+                "Spawn", "Миллион способов умереть на диком западе"
+            ],
+            "Аниме": [
+                "Предсмертный список зомби", "Кулинарные поединки Сомы(досмотреть)", "Токийский Гуль: Перерождение(досмотреть)", 
+                "Бездомный бог", "Иная", "Гачиакута", "Дневник будущего", "Пожарная бригада", "(Смотреть после пожарной бригады) Soul eater", 
+                "5 сантиметров в секунду", "Хочу съесть твою поджелудочную", "Евангелион", "Форма голоса", "Тонель в лето", 
+                "Тетрадь смерти", "Рагна богровый", "Резеро жизнь с нуля", "Магическая битва", "Моб психо сто", 
+                "Ванпанчмен (1,2 сезон, 3 залупа)", "Адский рай(досмотреть 2 сезон)", "Человек бензопила", "Коносуба", "Ковбой бибоп", 
+                "Завтрашний Джо", "Черный клевер", "Go Go Loser ranger", "Врата энштейна", "Кровавый парень", 
+                "Школьный учитель Онидзука!", "Восхождение в тени", "Darker than Black", 
+                "Плод Грисаи (Grisaia no Kajitsu, 2014, 13 эп. + спэшлы)", "Лабиринт Грисаи (Grisaia no Meikyuu / Caprice no Mayu 0, 2015, фильм/спэшл)", "Рай Грисаи (Grisaia no Rakuen, 2015, 10 эп. + спэшлы)", 
+                "Шарлотта", "Паразит", "Темнее черного", "Certain magical index", "Би: Начало", "Нет игры, нет жизни", 
+                "Одинокий рокер", "Код гиас", "Самурай чамплу"
+            ],
+            "Сериалы": [
+                "Пацаны(просмотрено)", "Флеш(досмотреть)", "Бесстыжие", "Уэйн", "Орвилл (сериал 2017 – 2022)"
+            ]
         };
 
-        // Загрузка настроек
         function applyStoredSettings() {
             const savedBg = localStorage.getItem('bgColor') || '#0d0a15';
             const savedBtn = localStorage.getItem('btnColor') || '#00e676';
-            
             document.documentElement.style.setProperty('--bg-color', savedBg);
             document.documentElement.style.setProperty('--emerald', savedBtn);
-            
             document.getElementById('bgPicker').value = savedBg;
             document.getElementById('btnPicker').value = savedBtn;
         }
@@ -98,21 +118,21 @@
         function updateColors() {
             const bg = document.getElementById('bgPicker').value;
             const btn = document.getElementById('btnPicker').value;
-            
             document.documentElement.style.setProperty('--bg-color', bg);
             document.documentElement.style.setProperty('--emerald', btn);
-            
             localStorage.setItem('bgColor', bg);
             localStorage.setItem('btnColor', btn);
         }
 
-        // Логика списка
-        function loadData() { return JSON.parse(localStorage.getItem('myWatchlist')) || initialData; }
+        function loadData() { 
+            const saved = localStorage.getItem('myWatchlist');
+            return saved ? JSON.parse(saved) : initialData; 
+        }
         function saveData(data) { localStorage.setItem('myWatchlist', JSON.stringify(data)); render(); }
 
         function addItem(cat) {
             const input = document.getElementById(`input-${cat}`);
-            if (!input.value) return;
+            if (!input.value.trim()) return;
             const data = loadData();
             data[cat].push(input.value);
             saveData(data);
@@ -127,7 +147,7 @@
         function editItem(cat, idx) {
             const text = document.getElementById(`item-${cat}-${idx}`).querySelector('.item-text').innerText;
             const newText = prompt("Редактировать:", text);
-            if (newText !== null) {
+            if (newText !== null && newText.trim() !== "") {
                 const data = loadData();
                 data[cat][idx] = newText;
                 saveData(data);
@@ -157,14 +177,13 @@
                 
                 section.innerHTML += `
                     <div style="margin-top:15px; display:flex; gap:5px;">
-                        <input type="text" id="input-${cat}" placeholder="Добавить...">
+                        <input type="text" id="input-${cat}" placeholder="Добавить новое...">
                         <button class="add-btn" onclick="addItem('${cat}')">+</button>
                     </div>`;
                 app.appendChild(section);
             });
         }
 
-        // Инициализация
         applyStoredSettings();
         render();
     </script>
