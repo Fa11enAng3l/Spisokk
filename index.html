@@ -11,7 +11,6 @@
         body { margin: 0; padding: 20px; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; transition: background 0.3s; }
         .container { max-width: 600px; margin: 0 auto; }
         
-        /* Панель настроек */
         .settings-panel { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; gap: 20px; align-items: center; justify-content: center; }
         .setting-item { display: flex; align-items: center; gap: 10px; }
         input[type="color"] { border: none; width: 40px; height: 40px; cursor: pointer; background: none; }
@@ -19,7 +18,11 @@
         h1 { text-align: center; color: var(--accent); }
         .category-block { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; }
         h2 { border-bottom: 2px solid var(--accent); padding-bottom: 5px; color: var(--accent); }
+        
+        /* Стили для элементов с нумерацией */
         .item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #333; }
+        .item-text { flex-grow: 1; margin-right: 10px; }
+        
         .btn-group { display: flex; gap: 5px; }
         button { cursor: pointer; padding: 5px 10px; border-radius: 4px; border: none; font-weight: bold; }
         .edit-btn { background: var(--edit); color: white; }
@@ -51,10 +54,10 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
-        const docRef = db.collection("watchlist").doc("myList");
 
         function applyColors(bg, accent) {
             document.documentElement.style.setProperty('--bg', bg);
+            // Немного затемняем карточку относительно фона, если фон слишком светлый
             document.documentElement.style.setProperty('--card', bg === '#0d0a15' ? '#1a1525' : '#222');
             document.documentElement.style.setProperty('--accent', accent);
             document.getElementById('bgPicker').value = bg;
@@ -85,7 +88,7 @@
                 section.innerHTML = `<h2>${cat}</h2>` + 
                     list.map((item, idx) => `
                         <div class="item">
-                            <span>${item}</span>
+                            <span class="item-text">${idx + 1}. ${item}</span>
                             <div class="btn-group">
                                 <button class="edit-btn" onclick="editItem('${cat}', ${idx}, '${item.replace(/'/g, "\\'")}')">Изменить</button>
                                 <button class="del-btn" onclick="deleteItem('${cat}', ${idx})">Удалить</button>
@@ -97,7 +100,6 @@
             });
         }
 
-        // Функции CRUD (без изменений, кроме удаления старого)
         function addItem(cat) {
             const val = document.getElementById(`input-${cat}`).value;
             if (!val) return;
@@ -111,7 +113,7 @@
             });
         }
         function editItem(cat, idx, oldVal) {
-            const newVal = prompt("Изменить:", oldVal);
+            const newVal = prompt("Изменить название:", oldVal);
             if (!newVal) return;
             db.collection("watchlist").doc("myList").get().then(doc => {
                 const data = doc.data();
