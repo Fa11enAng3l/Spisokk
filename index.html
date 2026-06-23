@@ -3,45 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Наш WatchList</title>
+    <title>WatchList</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     
     <style>
         :root { --bg-color: #0d0a15; --emerald: #00e676; --purple: #9d4edd; --card-bg: rgba(30, 20, 45, 0.7); }
-        body { margin: 0; padding: 20px; font-family: sans-serif; background: var(--bg-color); color: #fff; display: flex; flex-direction: column; align-items: center; transition: background 0.3s; }
+        body { margin: 0; padding: 20px; font-family: sans-serif; background: var(--bg-color); color: #fff; display: flex; flex-direction: column; align-items: center; }
         .container { max-width: 600px; width: 100%; }
         h1 { text-align: center; color: #fff; font-size: 2.5rem; text-transform: uppercase; letter-spacing: 5px; text-shadow: 0 0 10px var(--emerald); margin-bottom: 20px; }
-        .settings-block { background: var(--card-bg); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid var(--emerald); }
-        .category-block { background: var(--card-bg); backdrop-filter: blur(10px); padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); counter-reset: item; }
-        h2 { color: var(--emerald); border-left: 4px solid var(--purple); padding-left: 10px; margin-top: 0; }
-        .item { display: flex; align-items: flex-start; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); gap: 10px; counter-increment: item; }
-        .item::before { content: counter(item) ". "; color: var(--emerald); font-weight: bold; flex-shrink: 0; }
-        .item-text { flex-grow: 1; word-break: break-word; }
-        .actions { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
-        button { background: transparent; border: 1px solid var(--emerald); color: var(--emerald); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .category-block { background: var(--card-bg); padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); }
+        h2 { color: var(--emerald); }
+        .item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        button { background: transparent; border: 1px solid var(--emerald); color: var(--emerald); padding: 4px 8px; border-radius: 4px; cursor: pointer; }
         button.delete { border-color: #ff5252; color: #ff5252; }
-        button:hover { background: var(--emerald); color: #000; }
-        button.delete:hover { background: #ff5252; color: #fff; }
-        input { padding: 8px; border-radius: 5px; border: none; background: rgba(255,255,255,0.1); color: #fff; width: 100%; box-sizing: border-box; }
-        .add-btn { background: var(--emerald); border: none; color: #000; font-weight: bold; padding: 0 15px; }
+        input { padding: 8px; border-radius: 5px; border: none; background: rgba(255,255,255,0.1); color: #fff; width: 100%; margin-bottom: 10px; }
+        .add-btn { background: var(--emerald); color: #000; font-weight: bold; width: 100%; border: none; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>WatchList</h1>
-        <div class="settings-block">
-            <h3>⚙️ Настройки</h3>
-            <div style="display:flex; gap:15px;">
-                Фон: <input type="color" id="bgPicker" onchange="updateColors()" style="width: 50px;">
-                Кнопки: <input type="color" id="btnPicker" onchange="updateColors()" style="width: 50px;">
-            </div>
-        </div>
         <div id="app">Загрузка данных...</div>
     </div>
 
     <script>
-        // Твои ключи Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyBTtkGKIVzdK9rk-9HqXBa9hYdzH-n7Dh0",
             authDomain: "watchlist-5c90e.firebaseapp.com",
@@ -54,89 +40,53 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
-        // Настройки дизайна (сохраняем локально, чтобы не менять всем)
-        function applyStoredSettings() {
-            const savedBg = localStorage.getItem('bgColor') || '#0d0a15';
-            const savedBtn = localStorage.getItem('btnColor') || '#00e676';
-            document.documentElement.style.setProperty('--bg-color', savedBg);
-            document.documentElement.style.setProperty('--emerald', savedBtn);
-            document.getElementById('bgPicker').value = savedBg;
-            document.getElementById('btnPicker').value = savedBtn;
-        }
-
-        function updateColors() {
-            const bg = document.getElementById('bgPicker').value;
-            const btn = document.getElementById('btnPicker').value;
-            document.documentElement.style.setProperty('--bg-color', bg);
-            document.documentElement.style.setProperty('--emerald', btn);
-            localStorage.setItem('bgColor', bg);
-            localStorage.setItem('btnColor', btn);
-        }
-
-        // Логика работы с БД
         function render(data) {
             const app = document.getElementById('app');
             app.innerHTML = '';
-            Object.keys(data).forEach(cat => {
+            ["Фильмы", "Аниме", "Сериалы"].forEach(cat => {
+                const list = data[cat] || [];
                 const section = document.createElement('div');
                 section.className = 'category-block';
-                section.innerHTML = `<h2>${cat}</h2>`;
-                data[cat].forEach((item, idx) => {
-                    section.innerHTML += `
+                section.innerHTML = `<h2>${cat}</h2>` + 
+                    list.map((item, idx) => `
                         <div class="item">
-                            <span class="item-text">${item}</span>
-                            <div class="actions">
-                                <button onclick="editItem('${cat}', ${idx})">Изменить</button>
-                                <button class="delete" onclick="deleteItem('${cat}', ${idx})">Удалить</button>
-                            </div>
-                        </div>`;
-                });
-                section.innerHTML += `
-                    <div style="margin-top:15px; display:flex; gap:5px;">
-                        <input type="text" id="input-${cat}" placeholder="Добавить...">
-                        <button class="add-btn" onclick="addItem('${cat}')">+</button>
-                    </div>`;
+                            <span>${item}</span>
+                            <button class="delete" onclick="deleteItem('${cat}', ${idx})">Удалить</button>
+                        </div>`).join('') +
+                    `<input type="text" id="input-${cat}" placeholder="Добавить...">
+                     <button class="add-btn" onclick="addItem('${cat}')">Добавить в ${cat}</button>`;
                 app.appendChild(section);
             });
         }
 
-        // Слушаем изменения в реальном времени
         db.collection("watchlist").doc("myList").onSnapshot((doc) => {
             if (doc.exists) {
                 render(doc.data());
+            } else {
+                // Если пусто, создаем структуру
+                db.collection("watchlist").doc("myList").set({
+                    "Фильмы": [], "Аниме": [], "Сериалы": []
+                });
             }
         });
 
         function addItem(cat) {
-            const input = document.getElementById(`input-${cat}`);
-            if (!input.value.trim()) return;
-            db.collection("watchlist").doc("myList").get().then((doc) => {
+            const val = document.getElementById(`input-${cat}`).value;
+            if (!val) return;
+            db.collection("watchlist").doc("myList").get().then(doc => {
                 const data = doc.data();
-                data[cat].push(input.value);
+                data[cat].push(val);
                 db.collection("watchlist").doc("myList").update(data);
             });
         }
 
         function deleteItem(cat, idx) {
-            db.collection("watchlist").doc("myList").get().then((doc) => {
+            db.collection("watchlist").doc("myList").get().then(doc => {
                 const data = doc.data();
                 data[cat].splice(idx, 1);
                 db.collection("watchlist").doc("myList").update(data);
             });
         }
-
-        function editItem(cat, idx) {
-            db.collection("watchlist").doc("myList").get().then((doc) => {
-                const data = doc.data();
-                const newText = prompt("Редактировать:", data[cat][idx]);
-                if (newText !== null && newText.trim() !== "") {
-                    data[cat][idx] = newText;
-                    db.collection("watchlist").doc("myList").update(data);
-                }
-            });
-        }
-
-        applyStoredSettings();
     </script>
 </body>
 </html>
