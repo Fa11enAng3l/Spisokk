@@ -34,7 +34,7 @@
             <input type="text" id="newCatName" placeholder="Новая категория...">
             <button class="add-btn" onclick="addCategory()">Создать категорию</button>
         </div>
-        <div id="app">Загрузка...</div>
+        <div id="app">Загрузка данных...</div>
     </div>
 
     <script>
@@ -55,15 +55,26 @@
         });
 
         function renderApp() {
+            if(!cachedData) return;
             const app = document.getElementById('app');
             const query = document.getElementById('search').value.toLowerCase();
             app.innerHTML = '';
             
-            Object.keys(cachedData).forEach(cat => {
-                if(cat === 'settings') return;
+            // Фиксированный порядок
+            const order = ["Фильмы", "Сериалы", "Аниме", "Дорамы"];
+            const keys = Object.keys(cachedData).filter(k => k !== 'settings');
+            
+            // Сортировка: сначала те, что в order, потом остальные
+            keys.sort((a, b) => {
+                let idxA = order.indexOf(a);
+                let idxB = order.indexOf(b);
+                if (idxA === -1) idxA = 99;
+                if (idxB === -1) idxB = 99;
+                return idxA - idxB;
+            });
+
+            keys.forEach(cat => {
                 const list = cachedData[cat] || [];
-                
-                // Фильтрация для поиска
                 const filteredList = list.filter(i => {
                     const name = (typeof i === 'string') ? i : i.name;
                     return name.toLowerCase().includes(query);
@@ -77,7 +88,6 @@
                 section.innerHTML = `<h2>${cat}</h2>
                     <div class="progress-bar"><div class="progress-fill" style="width: ${percent}%"></div></div>
                     <div>${filteredList.map((item, idx) => {
-                        // Исправление "undefined": преобразуем старые строки в объекты
                         const obj = (typeof item === 'string') ? { name: item, watched: false, rating: 0, note: '' } : item;
                         return `
                         <div class="item">
@@ -125,11 +135,15 @@
         }
 
         function setRating(cat, idx) {
-            const r = prompt("Оценка (1-5):", cachedData[cat][idx].rating || 0);
+            const currentRating = cachedData[cat][idx].rating || 0;
+            const r = prompt("Оценка (1-5):", currentRating);
             if(r !== null) {
-                const list = [...cachedData[cat]];
-                list[idx].rating = parseInt(r);
-                db.collection("watchlist").doc("myList").update({ [cat]: list });
+                const num = parseInt(r);
+                if(!isNaN(num)) {
+                    const list = [...cachedData[cat]];
+                    list[idx].rating = num;
+                    db.collection("watchlist").doc("myList").update({ [cat]: list });
+                }
             }
         }
 
