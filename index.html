@@ -3,72 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мой WatchList</title>
+    <title>Наш WatchList</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    
     <style>
-        :root {
-            --bg-color: #0d0a15;
-            --emerald: #00e676;
-            --purple: #9d4edd;
-            --card-bg: rgba(30, 20, 45, 0.7);
-        }
-
-        body { 
-            margin: 0; padding: 15px; font-family: sans-serif; 
-            background: var(--bg-color); color: #fff; 
-            display: flex; flex-direction: column; align-items: center;
-        }
-
+        :root { --bg-color: #0d0a15; --emerald: #00e676; --purple: #9d4edd; --card-bg: rgba(30, 20, 45, 0.7); }
+        body { margin: 0; padding: 20px; font-family: sans-serif; background: var(--bg-color); color: #fff; display: flex; flex-direction: column; align-items: center; transition: background 0.3s; }
         .container { max-width: 600px; width: 100%; }
-
-        h1 { 
-            text-align: center; color: #fff; font-size: 2rem; margin: 20px 0;
-            text-transform: uppercase; letter-spacing: 3px;
-            text-shadow: 0 0 10px #fff, 0 0 20px var(--emerald);
-        }
-
+        h1 { text-align: center; color: #fff; font-size: 2.5rem; text-transform: uppercase; letter-spacing: 5px; text-shadow: 0 0 10px var(--emerald); margin-bottom: 20px; }
         .settings-block { background: var(--card-bg); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid var(--emerald); }
-        
-        .category-block { 
-            background: var(--card-bg); backdrop-filter: blur(10px); 
-            padding: 15px; border-radius: 15px; margin-bottom: 20px; 
-            border: 1px solid rgba(255,255,255,0.1);
-            counter-reset: item;
-        }
-
+        .category-block { background: var(--card-bg); backdrop-filter: blur(10px); padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.1); counter-reset: item; }
         h2 { color: var(--emerald); border-left: 4px solid var(--purple); padding-left: 10px; margin-top: 0; }
-
-        .item { 
-            display: flex; align-items: flex-start; justify-content: space-between; 
-            padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); gap: 10px;
-            counter-increment: item;
-        }
-        
+        .item { display: flex; align-items: flex-start; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); gap: 10px; counter-increment: item; }
         .item::before { content: counter(item) ". "; color: var(--emerald); font-weight: bold; flex-shrink: 0; }
         .item-text { flex-grow: 1; word-break: break-word; }
-
-        /* Блок кнопок */
-        .actions { 
-            display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; 
-        }
-
-        button { 
-            background: transparent; border: 1px solid var(--emerald); 
-            color: var(--emerald); padding: 4px 8px; border-radius: 4px; 
-            cursor: pointer; font-size: 12px; font-weight: bold;
-        }
+        .actions { display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; }
+        button { background: transparent; border: 1px solid var(--emerald); color: var(--emerald); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
         button.delete { border-color: #ff5252; color: #ff5252; }
-        
         button:hover { background: var(--emerald); color: #000; }
         button.delete:hover { background: #ff5252; color: #fff; }
-
         input { padding: 8px; border-radius: 5px; border: none; background: rgba(255,255,255,0.1); color: #fff; width: 100%; box-sizing: border-box; }
-        .add-btn { background: var(--emerald); border: none; color: #000; font-weight: bold; width: auto; padding: 0 15px; }
+        .add-btn { background: var(--emerald); border: none; color: #000; font-weight: bold; padding: 0 15px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>WatchList</h1>
-        
         <div class="settings-block">
             <h3>⚙️ Настройки</h3>
             <div style="display:flex; gap:15px;">
@@ -76,40 +37,24 @@
                 Кнопки: <input type="color" id="btnPicker" onchange="updateColors()" style="width: 50px;">
             </div>
         </div>
-
-        <div id="app"></div>
+        <div id="app">Загрузка данных...</div>
     </div>
 
     <script>
-        const initialData = {
-            "Фильмы": [
-                "Z – значит Захария (2015)", "Назад в будущее 3", "Трасса 60", "Час пик 1/2/3/4", "Полтора шпиона", 
-                "Живая сталь", "Kingsman: Секретная служба (2015)", "Kingsman: Золотое кольцо (2017)", 
-                "King’s Man: Начало (2021)", "Иллюзия обмана 2 (2016)", "Иллюзия обмана 3 (2025)", "Брюс Всемогущий", 
-                "Лего. Фильм(просмотрено)", "Интерстеллар", "Рио (1/2)(пересмотреть)", "Добро пожаловать в Zомбилэнд (2009)", 
-                "Zомбилэнд: Контрольный выстрел (2019)", "Искусство самообороны", "Меню", "Всё могу (2015)", 
-                "Изобретение лжи (2009)", "Всегда говори «ДА» (2008)", "Лжец, лжец (1997)", "Мост в Терабитию(2007)", 
-                "Идеальные дни", "Семь", "Драйв", "Отрыв", "Бесславные ублюдки", "Быстрее пули", "Малыш на драйве", 
-                "Несносные боссы", "Остров проклятых", "Волк с уолк-стрит", "Разрушение", "Одержимость", "Бетмен(2022)", 
-                "Spawn", "Миллион способов умереть на диком западе"
-            ],
-            "Аниме": [
-                "Предсмертный список зомби", "Кулинарные поединки Сомы(досмотреть)", "Токийский Гуль: Перерождение(досмотреть)", 
-                "Бездомный бог", "Иная", "Гачиакута", "Дневник будущего", "Пожарная бригада", "(Смотреть после пожарной бригады) Soul eater", 
-                "5 сантиметров в секунду", "Хочу съесть твою поджелудочную", "Евангелион", "Форма голоса", "Тонель в лето", 
-                "Тетрадь смерти", "Рагна богровый", "Резеро жизнь с нуля", "Магическая битва", "Моб психо сто", 
-                "Ванпанчмен (1,2 сезон, 3 залупа)", "Адский рай(досмотреть 2 сезон)", "Человек бензопила", "Коносуба", "Ковбой бибоп", 
-                "Завтрашний Джо", "Черный клевер", "Go Go Loser ranger", "Врата энштейна", "Кровавый парень", 
-                "Школьный учитель Онидзука!", "Восхождение в тени", "Darker than Black", 
-                "Плод Грисаи (Grisaia no Kajitsu, 2014, 13 эп. + спэшлы)", "Лабиринт Грисаи (Grisaia no Meikyuu / Caprice no Mayu 0, 2015, фильм/спэшл)", "Рай Грисаи (Grisaia no Rakuen, 2015, 10 эп. + спэшлы)", 
-                "Шарлотта", "Паразит", "Темнее черного", "Certain magical index", "Би: Начало", "Нет игры, нет жизни", 
-                "Одинокий рокер", "Код гиас", "Самурай чамплу"
-            ],
-            "Сериалы": [
-                "Пацаны(просмотрено)", "Флеш(досмотреть)", "Бесстыжие", "Уэйн", "Орвилл (сериал 2017 – 2022)"
-            ]
+        // Твои ключи Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBTtkGKIVzdK9rk-9HqXBa9hYdzH-n7Dh0",
+            authDomain: "watchlist-5c90e.firebaseapp.com",
+            projectId: "watchlist-5c90e",
+            storageBucket: "watchlist-5c90e.firebasestorage.app",
+            messagingSenderId: "410347694098",
+            appId: "1:410347694098:web:3539875f65d638a5f790cb"
         };
 
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Настройки дизайна (сохраняем локально, чтобы не менять всем)
         function applyStoredSettings() {
             const savedBg = localStorage.getItem('bgColor') || '#0d0a15';
             const savedBtn = localStorage.getItem('btnColor') || '#00e676';
@@ -128,49 +73,17 @@
             localStorage.setItem('btnColor', btn);
         }
 
-        function loadData() { 
-            const saved = localStorage.getItem('myWatchlist');
-            return saved ? JSON.parse(saved) : initialData; 
-        }
-        function saveData(data) { localStorage.setItem('myWatchlist', JSON.stringify(data)); render(); }
-
-        function addItem(cat) {
-            const input = document.getElementById(`input-${cat}`);
-            if (!input.value.trim()) return;
-            const data = loadData();
-            data[cat].push(input.value);
-            saveData(data);
-        }
-
-        function deleteItem(cat, idx) {
-            const data = loadData();
-            data[cat].splice(idx, 1);
-            saveData(data);
-        }
-
-        function editItem(cat, idx) {
-            const text = document.getElementById(`item-${cat}-${idx}`).querySelector('.item-text').innerText;
-            const newText = prompt("Редактировать:", text);
-            if (newText !== null && newText.trim() !== "") {
-                const data = loadData();
-                data[cat][idx] = newText;
-                saveData(data);
-            }
-        }
-
-        function render() {
+        // Логика работы с БД
+        function render(data) {
             const app = document.getElementById('app');
-            const data = loadData();
             app.innerHTML = '';
-            
             Object.keys(data).forEach(cat => {
                 const section = document.createElement('div');
                 section.className = 'category-block';
                 section.innerHTML = `<h2>${cat}</h2>`;
-                
                 data[cat].forEach((item, idx) => {
                     section.innerHTML += `
-                        <div class="item" id="item-${cat}-${idx}">
+                        <div class="item">
                             <span class="item-text">${item}</span>
                             <div class="actions">
                                 <button onclick="editItem('${cat}', ${idx})">Изменить</button>
@@ -178,7 +91,6 @@
                             </div>
                         </div>`;
                 });
-                
                 section.innerHTML += `
                     <div style="margin-top:15px; display:flex; gap:5px;">
                         <input type="text" id="input-${cat}" placeholder="Добавить...">
@@ -188,8 +100,43 @@
             });
         }
 
+        // Слушаем изменения в реальном времени
+        db.collection("watchlist").doc("myList").onSnapshot((doc) => {
+            if (doc.exists) {
+                render(doc.data());
+            }
+        });
+
+        function addItem(cat) {
+            const input = document.getElementById(`input-${cat}`);
+            if (!input.value.trim()) return;
+            db.collection("watchlist").doc("myList").get().then((doc) => {
+                const data = doc.data();
+                data[cat].push(input.value);
+                db.collection("watchlist").doc("myList").update(data);
+            });
+        }
+
+        function deleteItem(cat, idx) {
+            db.collection("watchlist").doc("myList").get().then((doc) => {
+                const data = doc.data();
+                data[cat].splice(idx, 1);
+                db.collection("watchlist").doc("myList").update(data);
+            });
+        }
+
+        function editItem(cat, idx) {
+            db.collection("watchlist").doc("myList").get().then((doc) => {
+                const data = doc.data();
+                const newText = prompt("Редактировать:", data[cat][idx]);
+                if (newText !== null && newText.trim() !== "") {
+                    data[cat][idx] = newText;
+                    db.collection("watchlist").doc("myList").update(data);
+                }
+            });
+        }
+
         applyStoredSettings();
-        render();
     </script>
 </body>
 </html>
