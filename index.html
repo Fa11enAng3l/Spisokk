@@ -17,18 +17,22 @@
         .category-block { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; }
         .progress-bar { height: 8px; background: #333; border-radius: 4px; overflow: hidden; margin: 10px 0; }
         .progress-fill { height: 100%; background: var(--accent); transition: width 0.3s; }
-        .item { padding: 10px; border-bottom: 1px solid #333; }
-        .stars { color: #ffd700; cursor: pointer; font-size: 1.2rem; }
-        button { cursor: pointer; border: none; padding: 5px 10px; border-radius: 4px; font-weight: bold; }
-        .add-btn { background: var(--accent); width: 100%; margin-top: 5px; }
+        .item { padding: 10px; border-bottom: 1px solid #333; margin-bottom: 5px; }
+        .btn-group { display: flex; gap: 5px; margin-top: 5px; flex-wrap: wrap; }
+        button { cursor: pointer; border: none; padding: 5px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; }
+        .add-btn { background: var(--accent); width: 100%; margin-top: 5px; padding: 10px; }
+        input[type="text"] { width: 100%; padding: 8px; border-radius: 4px; border: none; box-sizing: border-box; background: #2a2535; color: white; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>WATCHLIST</h1>
         <div class="panel">
-            <input type="text" id="newCatName" placeholder="Новая категория (например: Книги)...">
-            <button class="add-btn" onclick="addCategory()">Добавить категорию</button>
+            <input type="text" id="search" placeholder="🔍 Поиск по названию..." oninput="renderApp()">
+        </div>
+        <div class="panel">
+            <input type="text" id="newCatName" placeholder="Новая категория...">
+            <button class="add-btn" onclick="addCategory()">Создать категорию</button>
         </div>
         <div id="app">Загрузка...</div>
     </div>
@@ -52,26 +56,42 @@
 
         function renderApp() {
             const app = document.getElementById('app');
+            const query = document.getElementById('search').value.toLowerCase();
             app.innerHTML = '';
+            
             Object.keys(cachedData).forEach(cat => {
                 if(cat === 'settings') return;
                 const list = cachedData[cat] || [];
-                const watchedCount = list.filter(i => i.watched).length;
+                
+                // Фильтрация для поиска
+                const filteredList = list.filter(i => {
+                    const name = (typeof i === 'string') ? i : i.name;
+                    return name.toLowerCase().includes(query);
+                });
+
+                const watchedCount = list.filter(i => (typeof i !== 'string' && i.watched)).length;
                 const percent = list.length ? (watchedCount / list.length) * 100 : 0;
                 
                 const section = document.createElement('div');
                 section.className = 'category-block';
                 section.innerHTML = `<h2>${cat}</h2>
                     <div class="progress-bar"><div class="progress-fill" style="width: ${percent}%"></div></div>
-                    <div>${list.map((item, idx) => `
+                    <div>${filteredList.map((item, idx) => {
+                        // Исправление "undefined": преобразуем старые строки в объекты
+                        const obj = (typeof item === 'string') ? { name: item, watched: false, rating: 0, note: '' } : item;
+                        return `
                         <div class="item">
-                            <input type="checkbox" ${item.watched ? 'checked' : ''} onchange="toggleWatched('${cat}', ${idx})">
-                            <strong>${item.name}</strong> (${item.rating || 0}★)<br>
-                            <small>${item.note || ''}</small><br>
-                            <button onclick="setRating('${cat}', ${idx})">Оценка</button>
-                            <button onclick="editNote('${cat}', ${idx})">Заметка</button>
-                            <button style="background:red; color:white" onclick="deleteItem('${cat}', ${idx})">X</button>
-                        </div>`).join('')}</div>
+                            <input type="checkbox" ${obj.watched ? 'checked' : ''} onchange="toggleWatched('${cat}', ${list.indexOf(item)})">
+                            <strong>${obj.name}</strong> (${obj.rating || 0}★)<br>
+                            <small>${obj.note || ''}</small>
+                            <div class="btn-group">
+                                <button onclick="editName('${cat}', ${list.indexOf(item)}, '${obj.name.replace(/'/g, "\\'")}')">Изменить</button>
+                                <button onclick="setRating('${cat}', ${list.indexOf(item)})">Оценка</button>
+                                <button onclick="editNote('${cat}', ${list.indexOf(item)})">Заметка</button>
+                                <button style="background:#ff5252; color:white" onclick="deleteItem('${cat}', ${list.indexOf(item)})">Удалить</button>
+                            </div>
+                        </div>`;
+                    }).join('')}</div>
                     <input type="text" id="input-${cat}" placeholder="Добавить...">
                     <button class="add-btn" onclick="addItem('${cat}')">Добавить</button>`;
                 app.appendChild(section);
@@ -85,7 +105,17 @@
 
         function addItem(cat) {
             const val = document.getElementById(`input-${cat}`).value;
+            if(!val) return;
             db.collection("watchlist").doc("myList").update({ [cat]: firebase.firestore.FieldValue.arrayUnion({ name: val, watched: false, rating: 0, note: '' }) });
+        }
+
+        function editName(cat, idx, oldVal) {
+            const newVal = prompt("Новое название:", oldVal);
+            if(newVal) {
+                const list = [...cachedData[cat]];
+                list[idx].name = newVal;
+                db.collection("watchlist").doc("myList").update({ [cat]: list });
+            }
         }
 
         function toggleWatched(cat, idx) {
@@ -96,7 +126,7 @@
 
         function setRating(cat, idx) {
             const r = prompt("Оценка (1-5):", cachedData[cat][idx].rating || 0);
-            if(r) {
+            if(r !== null) {
                 const list = [...cachedData[cat]];
                 list[idx].rating = parseInt(r);
                 db.collection("watchlist").doc("myList").update({ [cat]: list });
