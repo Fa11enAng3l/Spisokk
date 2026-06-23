@@ -25,7 +25,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>MY WATCHLIST</h1>
+        <h1>MY WATCHLIST WITH MY GF</h1>
         <div class="settings-panel">
             Фон: <input type="color" id="bgPicker" onchange="updateColors()">
             Акцент: <input type="color" id="accentPicker" onchange="updateColors()">
@@ -55,7 +55,6 @@
             const app = document.getElementById('app');
             app.innerHTML = '';
             
-            // Получаем ключи категорий, исключая settings
             Object.keys(data).forEach(cat => {
                 if (cat === 'settings') return;
                 
@@ -64,9 +63,8 @@
                 section.className = 'category-block';
                 
                 let htmlItems = list.map((item, idx) => {
-                    // Универсальная обработка: если item — объект, берем .name, если строка — берем её саму
                     const name = (typeof item === 'string') ? item : (item.name || "Без названия");
-                    const safeName = name.replace(/'/g, "\\'"); // Безопасное экранирование для JS
+                    const safeName = name.replace(/'/g, "\\'");
                     
                     return `
                         <div class="item">
@@ -94,7 +92,6 @@
         function addItem(cat) {
             const val = document.getElementById(`input-${cat}`).value;
             if (!val) return;
-            // Всегда сохраняем как объект, чтобы в будущем не было ошибок
             db.collection("watchlist").doc("myList").update({ 
                 [cat]: firebase.firestore.FieldValue.arrayUnion({ name: val }) 
             });
@@ -113,7 +110,6 @@
             if (!newVal) return;
             db.collection("watchlist").doc("myList").get().then(doc => {
                 const data = doc.data();
-                // Обновляем на объект {name: ...}
                 data[cat][idx] = { name: newVal };
                 db.collection("watchlist").doc("myList").update({ [cat]: data[cat] });
             });
