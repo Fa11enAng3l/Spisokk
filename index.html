@@ -19,7 +19,6 @@
         .category-block { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; }
         h2 { border-bottom: 2px solid var(--accent); padding-bottom: 5px; color: var(--accent); }
         
-        /* Стили для элементов с нумерацией */
         .item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #333; }
         .item-text { flex-grow: 1; margin-right: 10px; }
         
@@ -57,7 +56,6 @@
 
         function applyColors(bg, accent) {
             document.documentElement.style.setProperty('--bg', bg);
-            // Немного затемняем карточку относительно фона, если фон слишком светлый
             document.documentElement.style.setProperty('--card', bg === '#0d0a15' ? '#1a1525' : '#222');
             document.documentElement.style.setProperty('--accent', accent);
             document.getElementById('bgPicker').value = bg;
@@ -69,10 +67,12 @@
             const accent = document.getElementById('accentPicker').value;
             db.collection("watchlist").doc("myList").update({ settings: { bg, accent } });
         }
-db.collection("watchlist").doc("myList").onSnapshot(doc => {
+
+        db.collection("watchlist").doc("myList").onSnapshot(doc => {
             const data = doc.data();
             if (!data) return;
-            const settings = data.settings  { bg: '#0d0a15', accent: '#00e676' };
+            // ИСПРАВЛЕНИЕ: добавили ||
+            const settings = data.settings || { bg: '#0d0a15', accent: '#00e676' };
             applyColors(settings.bg, settings.accent);
             render(data);
         });
@@ -81,10 +81,12 @@ db.collection("watchlist").doc("myList").onSnapshot(doc => {
             const app = document.getElementById('app');
             app.innerHTML = '';
             ["Фильмы", "Аниме", "Сериалы"].forEach(cat => {
-                const list = data[cat]  [];
+                // ИСПРАВЛЕНИЕ: добавили ||
+                const list = data[cat] || [];
                 const section = document.createElement('div');
                 section.className = 'category-block';
-                section.innerHTML = <h2>${cat}</h2> + 
+                // ИСПРАВЛЕНИЕ: добавили обратные кавычки ``
+                section.innerHTML = `<h2>${cat}</h2>` + 
                     list.map((item, idx) => `
                         <div class="item">
                             <span class="item-text">${idx + 1}. ${item}</span>
