@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WatchList WITH MY Ksu</title>
+    <title>WatchList Pro</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <style>
@@ -174,21 +174,21 @@
                 const section = document.createElement('div');
                 section.className = 'category-block';
                 section.innerHTML = `<h2>${cat}</h2>` + list.map((obj, idx) => `
-                    <div class="item">
-                        <div class="item-main">
-                            <input type="checkbox" ${obj.watched ? 'checked' : ''} onchange="toggleWatched('${cat}', ${idx})">
-                            <div class="item-info">
-                                <span class="${obj.watched ? 'watched' : ''}">${obj.name}</span>
-                                ${obj.rating?.comment ? `<span class="comment-text">"${obj.rating.comment}"</span>` : ''}
-                            </div>
-                        </div>
-                        <div class="rating-badge" onclick="rateItem('${cat}', ${idx})">
-                            ${obj.rating ? `Я:${obj.rating.me || 0} | Она:${obj.rating.gf || 0}` : '☆ Оценить'}
-                        </div>
-                        <div class="btn-group">
-                            <button onclick="deleteItem('${cat}', ${idx})" style="background:#ff5252; color:white">X</button>
-                        </div>
-                    </div>`).join('') + `<input type="text" id="in-${cat}" placeholder="Добавить..."><button class="add-btn" onclick="addItem('${cat}')">Добавить</button>`;
+                <div class="item">
+                <div class="item-main">
+                <input type="checkbox" ${obj.watched ? 'checked' : ''} onchange="toggleWatched('${cat}', ${idx})">
+                <div class="item-info">
+                <span class="${obj.watched ? 'watched' : ''}">${obj.name}</span>
+                ${obj.rating?.comment ? `<span class="comment-text">"${obj.rating.comment}"</span>` : ''}
+                </div>
+                </div>
+                <div class="rating-badge" onclick="rateItem('${cat}', ${idx})">
+                ${obj.rating ? `Я:${obj.rating.me || 0} | Она:${obj.rating.gf || 0}` : '☆ Оценить'}
+                </div>
+                <div class="btn-group">
+                <button onclick="deleteItem('${cat}', ${idx})" style="background:#ff5252; color:white">X</button>
+                </div>
+                </div>`).join('') + `<input type="text" id="in-${cat}" placeholder="Добавить..."><button class="add-btn" onclick="addItem('${cat}')">Добавить</button>`;
                 app.appendChild(section);
             });
         }
