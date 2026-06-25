@@ -67,37 +67,37 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         let cachedData = null;
-
+ 
         db.collection("watchlist").doc("myList").onSnapshot(doc => {
             if (doc.exists) { cachedData = doc.data(); renderApp(); }
         });
-
+ 
         function toObj(item) {
             return typeof item === 'string'
                 ? { name: item, watched: false, rating: null }
                 : { name: item.name, watched: item.watched ?? false, rating: item.rating ?? null };
         }
-
+ 
         function getAvg(list) {
             const rated = list.map(toObj).filter(o => o.rating !== null);
             if (!rated.length) return null;
             return (rated.reduce((s, o) => s + o.rating, 0) / rated.length).toFixed(1);
         }
-
+ 
         function renderApp() {
             if (!cachedData) return;
             const query = document.getElementById('search').value.toLowerCase();
             const app = document.getElementById('app');
             app.innerHTML = '';
-
+ 
             applyColors(cachedData.settings?.bg || '#0d0a15', cachedData.settings?.accent || '#00e676');
-
+ 
             ["Фильмы", "Аниме", "Сериалы"].forEach(cat => {
                 const list = cachedData[cat] || [];
                 const avg = getAvg(list);
                 const section = document.createElement('div');
                 section.className = 'category-block';
-
+ 
                 section.innerHTML =
                     `<h2>${cat} ${avg !== null ? `<span class="avg-badge">⭐ ${avg} / 10</span>` : ''}</h2>` +
                     list.map((item, idx) => {
@@ -123,17 +123,17 @@
                     }).join('') +
                     `<input type="text" id="input-${cat}" placeholder="Добавить...">
                      <button class="add-btn" onclick="addItem('${cat}')">Добавить</button>`;
-
+ 
                 app.appendChild(section);
             });
         }
-
+ 
         function toggleWatched(cat, idx) {
             const list = cachedData[cat].map(toObj);
             list[idx].watched = !list[idx].watched;
             db.collection("watchlist").doc("myList").update({ [cat]: list });
         }
-
+ 
         function rateItem(cat, idx) {
             const list = cachedData[cat].map(toObj);
             const obj = list[idx];
@@ -153,7 +153,7 @@
             list[idx] = obj;
             db.collection("watchlist").doc("myList").update({ [cat]: list });
         }
-
+ 
         function applyColors(bg, accent) {
             document.documentElement.style.setProperty('--bg', bg);
             document.documentElement.style.setProperty('--card', bg === '#0d0a15' ? '#1a1525' : '#222');
@@ -161,7 +161,7 @@
             document.getElementById('bgPicker').value = bg;
             document.getElementById('accentPicker').value = accent;
         }
-
+ 
         function updateColors() {
             db.collection("watchlist").doc("myList").update({
                 settings: {
@@ -170,7 +170,7 @@
                 }
             });
         }
-
+ 
         function addItem(cat) {
             const val = document.getElementById(`input-${cat}`).value.trim();
             if (!val) return;
@@ -179,13 +179,13 @@
             });
             document.getElementById(`input-${cat}`).value = '';
         }
-
+ 
         function deleteItem(cat, idx) {
             const list = cachedData[cat].map(toObj);
             list.splice(idx, 1);
             db.collection("watchlist").doc("myList").update({ [cat]: list });
         }
-
+ 
         function editItem(cat, idx, oldVal) {
             const newVal = prompt("Изменить название:", oldVal);
             if (!newVal) return;
