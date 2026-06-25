@@ -11,7 +11,11 @@
         body { 
             margin: 0; padding: 20px; font-family: 'Segoe UI', sans-serif; 
             background: var(--bg); color: #fff; 
-            background-size: cover; background-position: center; background-attachment: fixed; 
+            /* Настройки фона, чтобы не растягивался */
+            background-size: cover; 
+            background-position: center; 
+            background-repeat: no-repeat; 
+            background-attachment: fixed; 
             transition: background 0.3s; 
         }
         .container { max-width: 600px; margin: 0 auto; }
@@ -72,14 +76,13 @@
         db.collection("watchlist").doc("myList").onSnapshot(doc => {
             if (doc.exists) { 
                 cachedData = doc.data(); 
-                if (cachedData.settings?.bg) document.body.style.background = cachedData.settings.bg;
+                if (cachedData.settings?.bg) document.body.style.background = `url('${cachedData.settings.bg}') center/cover no-repeat fixed`;
                 renderApp(); 
             }
         });
 
         function toObj(item) { return typeof item === 'string' ? { name: item, watched: false, rating: null } : item; }
 
-        // Функция подсчета рейтинга для конкретной категории
         function getCategoryAverage(list) {
             let sum = 0, count = 0;
             list.forEach(o => {
@@ -96,12 +99,11 @@
             app.innerHTML = '';
             ["Фильмы", "Аниме", "Сериалы"].forEach(cat => {
                 const list = (cachedData[cat] || []).map(toObj);
-                const avg = getCategoryAverage(list); // Расчет для этой категории
+                const avg = getCategoryAverage(list);
                 
                 const section = document.createElement('div');
                 section.className = 'category-block';
                 
-                // Формируем заголовок с рейтингом
                 section.innerHTML = `
                     <h2 class="category-header">
                         <span>${cat}</span>
