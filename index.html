@@ -8,7 +8,16 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <style>
         :root { --bg: #0d0a15; --card: #1a1525; --accent: #00e676; --edit: #448aff; --del: #ff5252; }
-        body { margin: 0; padding: 20px; font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: #fff; transition: background 0.3s; background-size: cover; background-position: center; background-attachment: fixed; min-height: 100vh; }
+        body { 
+            margin: 0; padding: 20px; font-family: 'Segoe UI', sans-serif; 
+            background-color: var(--bg); color: #fff; 
+            transition: background 0.3s; 
+            background-size: cover !important; 
+            background-position: center !important; 
+            background-repeat: no-repeat !important; 
+            background-attachment: fixed !important; 
+            min-height: 100vh; 
+        }
         .container { max-width: 600px; margin: 0 auto; }
         .settings-panel, .search-panel { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
         input[type="text"], input[type="file"] { padding: 8px; border-radius: 6px; border: none; background: #2a2535; color: white; }
@@ -55,9 +64,7 @@
             if (doc.exists) { cachedData = doc.data(); renderApp(); }
         });
 
-        function toObj(item) {
-            return typeof item === 'string' ? { name: item, watched: false, rating: null } : item;
-        }
+        function toObj(item) { return typeof item === 'string' ? { name: item, watched: false, rating: null } : item; }
 
         function getAvg(list) {
             const items = list.map(toObj).filter(o => o.rating && (o.rating.me > 0 || o.rating.gf > 0));
@@ -74,7 +81,7 @@
             
             const bg = cachedData.settings?.bg || '#0d0a15';
             const accent = cachedData.settings?.accent || '#00e676';
-            document.body.style.background = bg.startsWith('url') ? bg : bg;
+            document.body.style.background = bg;
             document.documentElement.style.setProperty('--accent', accent);
             document.getElementById('accentPicker').value = accent;
             document.getElementById('bgInput').value = bg.startsWith('url') ? '' : bg;
@@ -118,9 +125,9 @@
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    canvas.width = 800; canvas.height = 800 * (img.height / img.width);
+                    canvas.width = 1200; canvas.height = 1200 * (img.height / img.width);
                     canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-                    db.collection("watchlist").doc("myList").update({ "settings.bg": `url('${canvas.toDataURL('image/jpeg', 0.6)}')` });
+                    db.collection("watchlist").doc("myList").update({ "settings.bg": `url('${canvas.toDataURL('image/jpeg', 0.5)}')` });
                 };
                 img.src = e.target.result;
             };
