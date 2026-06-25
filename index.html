@@ -10,47 +10,58 @@
         :root { 
             --bg: #0d0a15; --card: #1a1525; --accent: #00e676; 
             --edit: #448aff; --del: #ff5252;
+            /* Переменные для кастомизации плашек */
+            --rating-bg: #2a2535; --rating-text: #fff;
         }
         body { 
             margin: 0; padding: 20px; font-family: 'Segoe UI', sans-serif; 
-            background: var(--bg); color: #fff; min-height: 100vh;
-            background-size: cover; background-attachment: fixed;
+            background-color: var(--bg); color: #fff; 
+            transition: background 0.3s; 
+            background-size: cover !important; 
+            background-position: center !important; 
+            background-repeat: no-repeat !important; 
+            background-attachment: fixed !important; 
+            min-height: 100vh; 
         }
         .container { max-width: 600px; margin: 0 auto; }
-        .stats-header { text-align: center; margin-bottom: 20px; }
-        .stats-badge { background: var(--accent); color: #000; padding: 5px 15px; border-radius: 20px; font-weight: bold; }
-        
-        .settings-panel { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: grid; gap: 10px; }
-        .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-        
-        input { padding: 8px; border-radius: 6px; border: none; background: #2a2535; color: white; }
-        button { cursor: pointer; padding: 5px 10px; border-radius: 4px; border: none; font-weight: bold; background: #3a3a4a; color: white; }
-        
+        .settings-panel, .search-panel { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
+        input[type="text"], input[type="file"] { padding: 8px; border-radius: 6px; border: none; background: #2a2535; color: white; }
+        input[type="color"] { border: none; width: 40px; height: 40px; cursor: pointer; background: none; }
+        h1 { text-align: center; color: var(--accent); }
         .category-block { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; }
-        h2 { color: var(--accent); border-bottom: 2px solid var(--accent); padding-bottom: 5px; }
-        
-        .item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #333; }
+        h2 { border-bottom: 2px solid var(--accent); padding-bottom: 5px; color: var(--accent); margin: 0 0 12px 0; display: flex; justify-content: space-between; align-items: center; }
+        .avg-badge { font-size: 13px; font-weight: normal; background: #2a2535; padding: 3px 10px; border-radius: 20px; color: #ffd700; border: 1px solid #3a3a4a; }
+        .item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #333; gap: 8px; flex-wrap: wrap; }
+        .item-info { display: flex; flex-direction: column; gap: 4px; flex-grow: 1; min-width: 0; }
+        .item-row { display: flex; align-items: center; gap: 10px; }
+        .comment-text { font-size: 11px; color: #aaa; font-style: italic; margin-left: 25px; }
+        .watched { text-decoration: line-through; opacity: 0.6; }
         .btn-group { display: flex; gap: 5px; }
-        .rating-badge { cursor: pointer; padding: 3px 9px; border-radius: 20px; font-size: 12px; border: 1px solid var(--accent); background: #2a2535; }
+        button { cursor: pointer; padding: 5px 10px; border-radius: 4px; border: none; font-weight: bold; }
+        .edit-btn { background: var(--edit); color: white; }
+        .del-btn { background: var(--del); color: white; }
+        .add-btn { background: var(--accent); color: #000; width: 100%; margin-top: 5px; font-weight: bold; }
+        /* Кастомизируемые плашки */
+        .rating-badge { 
+            cursor: pointer; padding: 3px 9px; border-radius: 20px; font-size: 12px; 
+            border: 1px solid var(--accent); background: var(--rating-bg); 
+            color: var(--rating-text); user-select: none; transition: 0.2s;
+        }
+        .rating-badge.rated { color: #ffd700; border-color: #ffd700; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>WATCHLIST</h1>
-        <div class="stats-header">
-            Общий средний балл: <span id="totalAvg" class="stats-badge">0</span>
-        </div>
-        
+        <h1>WATCHLIST WITH MY GF</h1>
         <div class="settings-panel">
-            <div class="controls">
-                <input type="text" id="bgInput" placeholder="URL фона/код цвета/градиент">
-                <input type="file" id="bgFile" accept="image/*" onchange="handleFileUpload(this)">
-                <input type="color" id="accentPicker" onchange="saveSettings()">
-                <button onclick="saveSettings()">Применить</button>
-            </div>
+            <input type="text" id="bgInput" placeholder="Ссылка на фон" onchange="updateBg()">
+            <input type="file" id="bgFile" accept="image/*" onchange="handleFileUpload(this)">
+            <input type="color" id="accentPicker" title="Цвет акцента" onchange="updateColors()">
         </div>
-
-        <div id="app">Загрузка...</div>
+        <div class="search-panel">
+            <input type="text" id="search" placeholder="🔍 Поиск..." oninput="renderApp()">
+        </div>
+        <div id="app">Загрузка данных...</div>
     </div>
 
     <script>
@@ -63,86 +74,86 @@
             if (doc.exists) { cachedData = doc.data(); renderApp(); }
         });
 
-        function toObj(item) { return typeof item === 'string' ? { name: item, watched: false, rating: null } : item; }
+        function applyTheme(settings) {
+            const root = document.documentElement;
+            if (settings.bg) {
+                document.body.style.background = settings.bg;
+            }
+            if (settings.accent) {
+                root.style.setProperty('--accent', settings.accent);
+                document.getElementById('accentPicker').value = settings.accent;
+            }
+        }
 
         function renderApp() {
             if (!cachedData) return;
-            const settings = cachedData.settings || {};
+            applyTheme(cachedData.settings || {});
             
-            // Применяем настройки фона
-            document.body.style.background = settings.bg || '#0d0a15';
-            document.documentElement.style.setProperty('--accent', settings.accent || '#00e676');
-            document.getElementById('accentPicker').value = settings.accent || '#00e676';
-            document.getElementById('bgInput').value = settings.bg || '';
-
-            // Считаем общую статистику
-            calculateTotalStats();
-
+            const query = document.getElementById('search').value.toLowerCase();
             const app = document.getElementById('app');
             app.innerHTML = '';
-            
+
             ["Фильмы", "Аниме", "Сериалы"].forEach(cat => {
-                const list = (cachedData[cat] || []).map(toObj);
+                const list = (cachedData[cat] || []).map(i => typeof i === 'string' ? { name: i, watched: false, rating: null } : i);
                 const section = document.createElement('div');
                 section.className = 'category-block';
-                section.innerHTML = `<h2>${cat}</h2>` + list.map((obj, idx) => `
-                    <div class="item">
-                        <span>${obj.name}</span>
-                        <span class="rating-badge" onclick="rateItem('${cat}', ${idx})">
-                            ${obj.rating ? `Я:${obj.rating.me} | Она:${obj.rating.gf}` : 'Оценить'}
+                section.innerHTML = `<h2>${cat}</h2>` + list.map((obj, idx) => {
+                    if (!obj.name.toLowerCase().includes(query)) return '';
+                    return `<div class="item">
+                        <div class="item-info">
+                            <div class="item-row">
+                                <input type="checkbox" ${obj.watched ? 'checked' : ''} onchange="toggleWatched('${cat}', ${idx})">
+                                <span class="${obj.watched ? 'watched' : ''}">${obj.name}</span>
+                            </div>
+                            ${obj.rating?.comment ? `<span class="comment-text">💬 ${obj.rating.comment}</span>` : ''}
+                        </div>
+                        <span class="rating-badge ${obj.rating ? 'rated' : ''}" onclick="rateItem('${cat}', ${idx})">
+                            ${obj.rating ? `Я:${obj.rating.me || 0} | Она:${obj.rating.gf || 0}` : '☆ Оценить'}
                         </span>
                         <div class="btn-group">
-                            <button onclick="deleteItem('${cat}', ${idx})">✕</button>
+                            <button class="edit-btn" onclick="editItem('${cat}', ${idx}, '${obj.name.replace(/'/g, "\\'")}')">✎</button>
+                            <button class="del-btn" onclick="deleteItem('${cat}', ${idx})">✕</button>
                         </div>
-                    </div>`).join('');
+                    </div>`;
+                }).join('') + `<input type="text" id="in-${cat}" placeholder="Добавить..."><button class="add-btn" onclick="addItem('${cat}')">Добавить</button>`;
                 app.appendChild(section);
-            });
-        }
-
-        function calculateTotalStats() {
-            let sum = 0, count = 0;
-            ["Фильмы", "Аниме", "Сериалы"].forEach(cat => {
-                (cachedData[cat] || []).map(toObj).forEach(o => {
-                    if (o.rating && (o.rating.me > 0 || o.rating.gf > 0)) {
-                        sum += ((o.rating.me || 0) + (o.rating.gf || 0)) / ((o.rating.me > 0 && o.rating.gf > 0) ? 2 : 1);
-                        count++;
-                    }
-                });
-            });
-            document.getElementById('totalAvg').innerText = count > 0 ? (sum / count).toFixed(1) : "—";
-        }
-
-        function saveSettings() {
-            db.collection("watchlist").doc("myList").update({
-                "settings.bg": document.getElementById('bgInput').value,
-                "settings.accent": document.getElementById('accentPicker').value
             });
         }
 
         function handleFileUpload(input) {
             const file = input.files[0];
+            if (!file) return;
             const reader = new FileReader();
             reader.onload = e => {
-                db.collection("watchlist").doc("myList").update({ "settings.bg": `url('${e.target.result}')` });
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 1200; canvas.height = 1200 * (img.height / img.width);
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    db.collection("watchlist").doc("myList").update({ "settings.bg": `url('${canvas.toDataURL('image/jpeg', 0.5)}')` });
+                };
+                img.src = e.target.result;
             };
             reader.readAsDataURL(file);
         }
 
         function rateItem(cat, idx) {
-            const list = cachedData[cat].map(toObj);
-            const r = list[idx].rating || { me: 0, gf: 0 };
-            const me = prompt("Ваша оценка:", r.me);
+            const obj = cachedData[cat][idx];
+            const r = obj.rating || { me: 0, gf: 0, comment: '' };
+            const me = prompt("Ваша оценка:", r.me); if (me === null) return;
             const gf = prompt("Оценка девушки:", r.gf);
-            if (me !== null && gf !== null) {
-                list[idx].rating = { me: parseFloat(me), gf: parseFloat(gf) };
-                db.collection("watchlist").doc("myList").update({ [cat]: list });
-            }
+            const comm = prompt("Комментарий:", r.comment);
+            const list = cachedData[cat];
+            list[idx].rating = { me: parseFloat(me) || 0, gf: parseFloat(gf) || 0, comment: comm || '' };
+            db.collection("watchlist").doc("myList").update({ [cat]: list });
         }
-        
-        function deleteItem(cat, idx) { 
-            const list = cachedData[cat]; list.splice(idx, 1); 
-            db.collection("watchlist").doc("myList").update({ [cat]: list }); 
-        }
+
+        function updateBg() { db.collection("watchlist").doc("myList").update({ "settings.bg": document.getElementById('bgInput').value }); }
+        function updateColors() { db.collection("watchlist").doc("myList").update({ "settings.accent": document.getElementById('accentPicker').value }); }
+        function toggleWatched(cat, idx) { const list = cachedData[cat]; list[idx].watched = !list[idx].watched; db.collection("watchlist").doc("myList").update({ [cat]: list }); }
+        function addItem(cat) { const val = document.getElementById(`in-${cat}`).value.trim(); if (val) db.collection("watchlist").doc("myList").update({ [cat]: firebase.firestore.FieldValue.arrayUnion({ name: val, watched: false, rating: null }) }); }
+        function deleteItem(cat, idx) { const list = cachedData[cat]; list.splice(idx, 1); db.collection("watchlist").doc("myList").update({ [cat]: list }); }
+        function editItem(cat, idx, oldVal) { const newVal = prompt("Название:", oldVal); if (newVal) { const list = cachedData[cat]; list[idx].name = newVal; db.collection("watchlist").doc("myList").update({ [cat]: list }); } }
     </script>
 </body>
 </html>
