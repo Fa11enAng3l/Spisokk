@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WatchList Pro</title>
+    <title>WatchList с ненаглядной</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <style>
-        :root { --bg1: #0d0a15; --bg2: #1a1525; --accent: #00e676; --edit: #448aff; --del: #ff5252; }
+        :root { --bg1: #0d0a15; --bg2: #1a1525; --accent: #ff6b9d; --edit: #448aff; --del: #ff5252; }
         body { margin: 0; padding: 20px; font-family: 'Segoe UI', sans-serif; min-height: 100vh;
                background: linear-gradient(135deg, var(--bg1), var(--bg2)); color: #fff; transition: background 0.3s; }
         .container { max-width: 600px; margin: 0 auto; }
@@ -17,26 +17,26 @@
         h1 { text-align: center; color: var(--accent); }
         .category-block { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 20px; backdrop-filter: blur(5px); }
         h2 { border-bottom: 2px solid var(--accent); padding-bottom: 5px; color: var(--accent); margin: 0 0 12px 0; display: flex; justify-content: space-between; align-items: center; }
+        .avg-badge { font-size: 13px; font-weight: normal; background: rgba(0,0,0,0.3); padding: 3px 10px; border-radius: 20px; color: #ffd700; }
         .item { display: flex; flex-direction: column; padding: 10px 0; border-bottom: 1px solid #333; gap: 8px; }
         .item-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
         .item-info { display: flex; align-items: center; gap: 10px; flex-grow: 1; min-width: 0; }
-        .item-info span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .watched { text-decoration: line-through; opacity: 0.6; }
         .btn-group { display: flex; gap: 5px; }
         button { cursor: pointer; padding: 5px 10px; border-radius: 4px; border: none; font-weight: bold; }
         .edit-btn { background: var(--edit); color: white; }
         .del-btn { background: var(--del); color: white; }
-        .add-btn { background: var(--accent); color: #000; width: 100%; margin-top: 5px; }
+        .add-btn { background: var(--accent); color: #fff; width: 100%; margin-top: 5px; }
         .rating-box { display: flex; gap: 5px; cursor: pointer; }
         .rating-badge { padding: 2px 8px; border-radius: 10px; font-size: 12px; border: 1px solid #444; background: #2a2535; }
         .rating-badge.p1 { color: #81c784; }
-        .rating-badge.p2 { color: #64b5f6; }
-        .comment-text { font-size: 12px; color: #aaa; font-style: italic; margin-left: 30px; }
+        .rating-badge.p2 { color: #ff80ab; }
+        .comment-text { font-size: 12px; color: #aaa; font-style: italic; margin-left: 25px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>WATCHLIST PRO</h1>
+        <h1>WATCHLIST WITH MY Ksu</h1>
         <div class="settings-panel">
             Фон: <input type="color" id="bg1Picker" onchange="updateColors()">
             <input type="color" id="bg2Picker" onchange="updateColors()">
@@ -64,16 +64,27 @@
             if (doc.exists) { cachedData = doc.data(); renderApp(); }
         });
 
-        // Функция конвертации с поддержкой старых данных (миграция на лету)
         function toObj(item) {
             if (typeof item === 'string') return { name: item, watched: false, p1: null, p2: null, comment: "" };
             return {
                 name: item.name,
                 watched: item.watched ?? false,
-                p1: item.p1 ?? (item.rating ?? null), // Поддержка старой оценки
+                p1: item.p1 ?? null,
                 p2: item.p2 ?? null,
                 comment: item.comment ?? ""
             };
+        }
+
+        // Расчет среднего арифметического категории
+        function getCategoryAvg(list) {
+            const ratings = [];
+            list.forEach(i => {
+                if (i.p1 !== null) ratings.push(i.p1);
+                if (i.p2 !== null) ratings.push(i.p2);
+            });
+            if (ratings.length === 0) return null;
+            const sum = ratings.reduce((a, b) => a + b, 0);
+            return (sum / ratings.length).toFixed(1);
         }
 
         function renderApp() {
@@ -83,13 +94,16 @@
             app.innerHTML = '';
             
             const cfg = cachedData.settings || {};
-            applyColors(cfg.bg1 || '#0d0a15', cfg.bg2 || '#1a1525', cfg.accent || '#00e676');
+            applyColors(cfg.bg1 || '#0d0a15', cfg.bg2 || '#1a1525', cfg.accent || '#ff6b9d');
 
             ["Фильмы", "Аниме", "Сериалы"].forEach(cat => {
                 const list = (cachedData[cat] || []).map(toObj);
+                const avg = getCategoryAvg(list);
+                
                 const section = document.createElement('div');
                 section.className = 'category-block';
-                section.innerHTML = `<h2>${cat}</h2>` + list.map((obj, idx) => {
+                section.innerHTML = `<h2>${cat} ${avg ? `<span class="avg-badge">Общий балл: ${avg}</span>` : ''}</h2>` + 
+                list.map((obj, idx) => {
                     if (!obj.name.toLowerCase().includes(query)) return '';
                     return `
                         <div class="item">
@@ -99,8 +113,8 @@
                                     <span class="${obj.watched ? 'watched' : ''}">${obj.name}</span>
                                 </div>
                                 <div class="rating-box" onclick="editRating('${cat}', ${idx})">
-                                    <span class="rating-badge p1">P1: ${obj.p1 ?? '-'}</span>
-                                    <span class="rating-badge p2">P2: ${obj.p2 ?? '-'}</span>
+                                    <span class="rating-badge p1" title="Твоя оценка">Я: ${obj.p1 ?? '-'}</span>
+                                    <span class="rating-badge p2" title="Оценка ненаглядной">Она: ${obj.p2 ?? '-'}</span>
                                 </div>
                                 <div class="btn-group">
                                     <button class="edit-btn" onclick="editItem('${cat}', ${idx}, '${obj.name.replace(/'/g, "\\'")}')">✎</button>
@@ -109,16 +123,16 @@
                             </div>
                             ${obj.comment ? `<div class="comment-text">💬 ${obj.comment}</div>` : ''}
                         </div>`;
-                }).join('') + `<input type="text" id="input-${cat}" placeholder="Добавить..."><button class="add-btn" onclick="addItem('${cat}')">Добавить</button>`;
+                }).join('') + `<input type="text" id="input-${cat}" placeholder="Добавить новое..."><button class="add-btn" onclick="addItem('${cat}')">Добавить</button>`;
                 app.appendChild(section);
             });
         }
 
         function editRating(cat, idx) {
             const item = toObj(cachedData[cat][idx]);
-            const p1 = prompt("Оценка P1 (0-10):", item.p1 || "");
+            const p1 = prompt("Твоя оценка (0-10):", item.p1 || "");
             if (p1 === null) return;
-            const p2 = prompt("Оценка P2 (0-10):", item.p2 || "");
+            const p2 = prompt("Оценка моей ненаглядной (0-10):", item.p2 || "");
             if (p2 === null) return;
             const comment = prompt("Комментарий:", item.comment || "");
             if (comment === null) return;
@@ -131,6 +145,25 @@
             db.collection("watchlist").doc("myList").update({ [cat]: list });
         }
 
+        function addItem(cat) {
+            const val = document.getElementById(`input-${cat}`).value.trim();
+            if (!val) return;
+            
+            // Проверка на наличие дубликата
+            const exists = cachedData[cat].some(i => i.name.toLowerCase() === val.toLowerCase());
+            if (exists) {
+                alert("Это уже есть в списке!");
+                return;
+            }
+
+            const newItem = { name: val, watched: false, p1: null, p2: null, comment: "" };
+            db.collection("watchlist").doc("myList").update({
+                [cat]: firebase.firestore.FieldValue.arrayUnion(newItem)
+            });
+            document.getElementById(`input-${cat}`).value = '';
+        }
+
+        // ... остальные функции (applyColors, updateColors, toggleWatched, deleteItem, editItem) остаются без изменений ...
         function applyColors(bg1, bg2, accent) {
             document.documentElement.style.setProperty('--bg1', bg1);
             document.documentElement.style.setProperty('--bg2', bg2);
@@ -148,16 +181,6 @@
                     accent: document.getElementById('accentPicker').value
                 }
             });
-        }
-
-        function addItem(cat) {
-            const val = document.getElementById(`input-${cat}`).value.trim();
-            if (!val) return;
-            const newItem = { name: val, watched: false, p1: null, p2: null, comment: "" };
-            db.collection("watchlist").doc("myList").update({
-                [cat]: firebase.firestore.FieldValue.arrayUnion(newItem)
-            });
-            document.getElementById(`input-${cat}`).value = '';
         }
 
         function toggleWatched(cat, idx) {
