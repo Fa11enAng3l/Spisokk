@@ -35,18 +35,11 @@
             flex-wrap: wrap;
         }
         input[type="color"], input[type="number"] { 
-            border: none; 
-            width: 50px; 
-            height: 40px; 
-            cursor: pointer; 
+            border: none; width: 50px; height: 40px; cursor: pointer; 
         }
         input[type="text"] { 
-            padding: 10px; 
-            width: 100%; 
-            border-radius: 6px; 
-            border: none; 
-            background: #2a2535; 
-            color: white; 
+            padding: 10px; width: 100%; border-radius: 6px; border: none; 
+            background: #2a2535; color: white; 
         }
         h1 { text-align: center; color: var(--accent); }
         .category-block { 
@@ -66,20 +59,13 @@
             align-items: center; 
         }
         .avg-badge { 
-            font-size: 13px; 
-            font-weight: normal; 
-            background: rgba(0,0,0,0.3); 
-            padding: 3px 10px; 
-            border-radius: 20px; 
-            color: #ffd700; 
-            border: 1px solid #444; 
+            font-size: 13px; font-weight: normal; 
+            background: rgba(0,0,0,0.3); padding: 3px 10px; 
+            border-radius: 20px; color: #ffd700; border: 1px solid #444; 
         }
         .item { 
-            display: flex; 
-            flex-direction: column; 
-            padding: 10px 0; 
+            padding: 12px 0; 
             border-bottom: 1px solid #333; 
-            gap: 8px; 
         }
         .item-row { 
             display: flex; 
@@ -87,18 +73,12 @@
             justify-content: space-between; 
             gap: 8px; 
         }
-        .item-info { 
-            display: flex; 
-            align-items: center; 
-            gap: 10px; 
-            flex-grow: 1; 
-            min-width: 0; 
-        }
+        .item-info { display: flex; align-items: center; gap: 10px; flex-grow: 1; }
         .watched { text-decoration: line-through; opacity: 0.6; }
         .btn-group { display: flex; gap: 5px; }
         button { 
             cursor: pointer; 
-            padding: 5px 10px; 
+            padding: 6px 12px; 
             border-radius: 4px; 
             border: none; 
             font-weight: bold; 
@@ -109,11 +89,12 @@
             background: var(--accent); 
             color: #fff; 
             width: 100%; 
-            margin-top: 5px; 
+            margin-top: 8px; 
+            padding: 10px; 
         }
         .rating-box { 
             display: flex; 
-            gap: 5px; 
+            gap: 6px; 
             cursor: pointer; 
         }
         .rating-badge { 
@@ -129,13 +110,14 @@
             font-size: 12px; 
             color: #aaa; 
             font-style: italic; 
-            margin-left: 25px; 
+            margin: 6px 0 0 28px; 
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>WATCHLIST ЮРОЧКИ И ЛЮБИМОЙ КСЮ ❤️</h1>
+        
         <div class="settings-panel">
             Цвет 1: <input type="color" id="bg1Picker" onchange="updateColors()">
             Цвет 2: <input type="color" id="bg2Picker" onchange="updateColors()">
@@ -143,7 +125,7 @@
             Акцент: <input type="color" id="accentPicker" onchange="updateColors()">
         </div>
         <div class="search-panel">
-            <input type="text" id="search" placeholder="🔍 Поиск..." oninput="renderApp()">
+            <input type="text" id="search" placeholder="🔍 Поиск..." oninput="debouncedRender()">
         </div>
         <div id="app">Загрузка...</div>
     </div>
@@ -157,20 +139,25 @@
             messagingSenderId: "410347694098",
             appId: "1:410347694098:web:3539875f65d638a5f790cb"
         };
+
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         let cachedData = null;
+        let debounceTimer = null;
 
-        db.collection("watchlist").doc("myList").onSnapshot(doc => {
-            if (doc.exists) { 
-                cachedData = doc.data(); 
-                renderApp(); 
+        const docRef = db.collection("watchlist").doc("myList");
+
+        docRef.onSnapshot(doc => {
+            if (doc.exists) {
+                cachedData = doc.data();
+                renderApp();
             }
         });
 
         function toObj(item) {
-            if (typeof item === 'string') 
+            if (typeof item === 'string') {
                 return { name: item, watched: false, p1: null, p2: null, comment: "" };
+            }
             return {
                 name: item.name,
                 watched: item.watched ?? false,
@@ -181,82 +168,90 @@
         }
 
         function getCategoryAvg(list) {
-            let sum = 0;
-            let count = 0;
-            list.forEach(i => {
-                const v1 = parseFloat(i.p1);
-                const v2 = parseFloat(i.p2);
-                if (!isNaN(v1)) { sum += v1; count++; }
-                if (!isNaN(v2)) { sum += v2; count++; }
-            });
+            let sum = 0, count = 0;
+            for (const i of list) {
+                if (i.p1 != null) { sum += i.p1; count++; }
+                if (i.p2 != null) { sum += i.p2; count++; }
+            }
             return count > 0 ? (sum / count).toFixed(1) : null;
+        }
+
+        function debouncedRender() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(renderApp, 280);
         }
 
         function renderApp() {
             if (!cachedData) return;
-            const query = document.getElementById('search').value.toLowerCase();
+
+            const query = document.getElementById('search').value.toLowerCase().trim();
             const app = document.getElementById('app');
             app.innerHTML = '';
-            
+
             const cfg = cachedData.settings || {};
-            applyColors(
-                cfg.bg1 || '#0d0a15', 
-                cfg.bg2 || '#1a1525', 
-                cfg.deg || 135, 
-                cfg.accent || '#ff6b9d'
-            );
+            applyColors(cfg.bg1, cfg.bg2, cfg.deg, cfg.accent);
 
             ["Фильмы", "Аниме", "Сериалы"].forEach(cat => {
                 const rawList = cachedData[cat] || [];
-                
-                const uniqueList = [];
+                const list = rawList.map(toObj);
+
+                // Убираем дубликаты + применяем поиск
                 const seen = new Set();
-                rawList.forEach(item => {
-                    const obj = toObj(item);
-                    if (!seen.has(obj.name.toLowerCase())) {
-                        uniqueList.push(obj);
-                        seen.add(obj.name.toLowerCase());
+                const uniqueList = [];
+                for (const item of list) {
+                    const key = item.name.toLowerCase();
+                    if (!seen.has(key)) {
+                        seen.add(key);
+                        if (item.name.toLowerCase().includes(query)) {
+                            uniqueList.push(item);
+                        }
                     }
-                });
+                }
 
                 const avg = getCategoryAvg(uniqueList);
-                
                 const section = document.createElement('div');
                 section.className = 'category-block';
-                section.innerHTML = `<h2>${cat} ${avg ? `<span class="avg-badge">Общий балл: ${avg}</span>` : ''}</h2>` + 
-                uniqueList.map((obj) => {
-                    if (!obj.name.toLowerCase().includes(query)) return '';
-                    return `
+
+                let html = `<h2>${cat} ${avg ? `<span class="avg-badge">Общий балл: ${avg}</span>` : ''}</h2>`;
+
+                for (const obj of uniqueList) {
+                    const escapedName = obj.name.replace(/'/g, "\\'");
+                    html += `
                         <div class="item">
                             <div class="item-row">
                                 <div class="item-info">
-                                    <input type="checkbox" ${obj.watched ? 'checked' : ''} onchange="toggleWatched('${cat}', '${obj.name.replace(/'/g, "\\'")}')">
+                                    <input type="checkbox" ${obj.watched ? 'checked' : ''} 
+                                           onchange="toggleWatched('${cat}', '${escapedName}')">
                                     <span class="${obj.watched ? 'watched' : ''}">${obj.name}</span>
                                 </div>
-                                <div class="rating-box" onclick="editRating('${cat}', '${obj.name.replace(/'/g, "\\'")}')">
-                                    <span class="rating-badge p1" title="Оценка Юрочки">Юрочка: ${obj.p1 ?? '-'}</span>
-                                    <span class="rating-badge p2" title="Оценка любимой">❤️ Любимая Ксю: ${obj.p2 ?? '-'}</span>
+                                <div class="rating-box" onclick="editRating('${cat}', '${escapedName}')">
+                                    <span class="rating-badge p1">Юрочка: ${obj.p1 ?? '-'}</span>
+                                    <span class="rating-badge p2">❤️ Ксю: ${obj.p2 ?? '-'}</span>
                                 </div>
                                 <div class="btn-group">
-                                    <button class="edit-btn" onclick="editItem('${cat}', '${obj.name.replace(/'/g, "\\'")}')">✎</button>
-                                    <button class="del-btn" onclick="deleteItem('${cat}', '${obj.name.replace(/'/g, "\\'")}')">✕</button>
+                                    <button class="edit-btn" onclick="editItem('${cat}', '${escapedName}')">✎</button>
+                                    <button class="del-btn" onclick="deleteItem('${cat}', '${escapedName}')">✕</button>
                                 </div>
                             </div>
                             ${obj.comment ? `<div class="comment-text">💬 ${obj.comment}</div>` : ''}
                         </div>`;
-                }).join('') + 
-                `<input type="text" id="input-${cat}" placeholder="Добавить новое...">
-                 <button class="add-btn" onclick="addItem('${cat}')">Добавить</button>`;
+                }
+
+                html += `
+                    <input type="text" id="input-${cat}" placeholder="Добавить новое...">
+                    <button class="add-btn" onclick="addItem('${cat}')">Добавить</button>`;
+
+                section.innerHTML = html;
                 app.appendChild(section);
             });
         }
 
-        function applyColors(bg1, bg2, deg, accent) {
+        function applyColors(bg1 = '#0d0a15', bg2 = '#1a1525', deg = 135, accent = '#ff6b9d') {
             document.documentElement.style.setProperty('--bg1', bg1);
             document.documentElement.style.setProperty('--bg2', bg2);
             document.documentElement.style.setProperty('--deg', deg + 'deg');
             document.documentElement.style.setProperty('--accent', accent);
-            
+
             document.getElementById('bg1Picker').value = bg1;
             document.getElementById('bg2Picker').value = bg2;
             document.getElementById('degInput').value = deg;
@@ -264,7 +259,7 @@
         }
 
         function updateColors() {
-            db.collection("watchlist").doc("myList").update({
+            docRef.update({
                 settings: {
                     bg1: document.getElementById('bg1Picker').value,
                     bg2: document.getElementById('bg2Picker').value,
@@ -274,10 +269,38 @@
             });
         }
 
-        function editRating(cat, name) {
-            const list = cachedData[cat].map(toObj);
+        function addItem(cat) {
+            const input = document.getElementById(`input-${cat}`);
+            const val = input.value.trim();
+            if (!val) return;
+
+            const exists = (cachedData[cat] || []).some(i => toObj(i).name.toLowerCase() === val.toLowerCase());
+            if (exists) {
+                alert("Это уже есть в списке!");
+                return;
+            }
+
+            docRef.update({
+                [cat]: firebase.firestore.FieldValue.arrayUnion({
+                    name: val, watched: false, p1: null, p2: null, comment: ""
+                })
+            });
+            input.value = '';
+        }
+
+        function toggleWatched(cat, name) {
+            const list = (cachedData[cat] || []).map(toObj);
             const item = list.find(i => i.name === name);
-            if(!item) return;
+            if (item) {
+                item.watched = !item.watched;
+                docRef.update({ [cat]: list });
+            }
+        }
+
+        function editRating(cat, name) {
+            const list = (cachedData[cat] || []).map(toObj);
+            const item = list.find(i => i.name === name);
+            if (!item) return;
 
             const p1 = prompt("Оценка Юрочки (0-10):", item.p1 || "");
             if (p1 === null) return;
@@ -289,49 +312,24 @@
             item.p1 = p1.trim() ? parseFloat(p1.replace(',', '.')) : null;
             item.p2 = p2.trim() ? parseFloat(p2.replace(',', '.')) : null;
             item.comment = comment.trim();
-            
-            db.collection("watchlist").doc("myList").update({ [cat]: list });
-        }
 
-        function addItem(cat) {
-            const input = document.getElementById(`input-${cat}`);
-            const val = input.value.trim();
-            if (!val) return;
-            
-            if (cachedData[cat].some(i => toObj(i).name.toLowerCase() === val.toLowerCase())) {
-                alert("Это уже есть в списке!");
-                return;
-            }
-
-            const newItem = { name: val, watched: false, p1: null, p2: null, comment: "" };
-            db.collection("watchlist").doc("myList").update({
-                [cat]: firebase.firestore.FieldValue.arrayUnion(newItem)
-            });
-            input.value = '';
-        }
-
-        function toggleWatched(cat, name) {
-            const list = cachedData[cat].map(toObj);
-            const item = list.find(i => i.name === name);
-            if(item) {
-                item.watched = !item.watched;
-                db.collection("watchlist").doc("myList").update({ [cat]: list });
-            }
+            docRef.update({ [cat]: list });
         }
 
         function deleteItem(cat, name) {
-            const list = cachedData[cat].map(toObj).filter(i => i.name !== name);
-            db.collection("watchlist").doc("myList").update({ [cat]: list });
+            const list = (cachedData[cat] || []).map(toObj).filter(i => i.name !== name);
+            docRef.update({ [cat]: list });
         }
 
         function editItem(cat, oldName) {
             const newVal = prompt("Изменить название:", oldName);
-            if (!newVal) return;
-            const list = cachedData[cat].map(toObj);
+            if (!newVal || newVal === oldName) return;
+
+            const list = (cachedData[cat] || []).map(toObj);
             const item = list.find(i => i.name === oldName);
-            if(item) {
+            if (item) {
                 item.name = newVal;
-                db.collection("watchlist").doc("myList").update({ [cat]: list });
+                docRef.update({ [cat]: list });
             }
         }
     </script>
