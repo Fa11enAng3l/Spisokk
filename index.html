@@ -15,103 +15,48 @@
             --del: #ff5252; 
         }
         body { 
-            margin: 0; 
-            padding: 20px; 
-            font-family: 'Segoe UI', sans-serif; 
+            margin: 0; padding: 20px; font-family: 'Segoe UI', sans-serif; 
             min-height: 100vh;
             background: linear-gradient(var(--deg, 135deg), var(--bg1), var(--bg2)); 
-            color: #fff; 
-            transition: background 0.5s;
+            color: #fff; transition: background 0.5s;
         }
         .container { max-width: 600px; margin: 0 auto; }
         .settings-panel, .search-panel { 
-            background: rgba(0,0,0,0.3); 
-            padding: 15px; 
-            border-radius: 12px; 
-            margin-bottom: 20px; 
-            display: flex; 
-            gap: 10px; 
-            align-items: center; 
-            flex-wrap: wrap;
+            background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; 
+            margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
         }
-        input[type="color"], input[type="number"] { 
-            border: none; width: 50px; height: 40px; cursor: pointer; 
-        }
-        input[type="text"] { 
-            padding: 10px; width: 100%; border-radius: 6px; border: none; 
+        input[type="color"], input[type="number"] { border: none; width: 50px; height: 40px; cursor: pointer; }
+        input[type="text"], select { 
+            padding: 10px; border-radius: 6px; border: none; 
             background: #2a2535; color: white; 
         }
         h1 { text-align: center; color: var(--accent); }
         .category-block { 
-            background: rgba(255,255,255,0.05); 
-            padding: 15px; 
-            border-radius: 12px; 
-            margin-bottom: 20px; 
-            backdrop-filter: blur(5px); 
+            background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; 
+            margin-bottom: 20px; backdrop-filter: blur(5px); 
         }
         h2 { 
-            border-bottom: 2px solid var(--accent); 
-            padding-bottom: 5px; 
-            color: var(--accent); 
-            margin: 0 0 12px 0; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
+            border-bottom: 2px solid var(--accent); padding-bottom: 5px; color: var(--accent); 
+            margin: 0 0 12px 0; display: flex; justify-content: space-between; align-items: center; 
         }
         .avg-badge { 
             font-size: 13px; font-weight: normal; 
             background: rgba(0,0,0,0.3); padding: 3px 10px; 
             border-radius: 20px; color: #ffd700; border: 1px solid #444; 
         }
-        .item { 
-            padding: 12px 0; 
-            border-bottom: 1px solid #333; 
-        }
-        .item-row { 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
-            gap: 8px; 
-        }
+        .item { padding: 12px 0; border-bottom: 1px solid #333; }
+        .item-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
         .item-info { display: flex; align-items: center; gap: 10px; flex-grow: 1; }
         .watched { text-decoration: line-through; opacity: 0.6; }
-        .btn-group { display: flex; gap: 5px; }
-        button { 
-            cursor: pointer; 
-            padding: 6px 12px; 
-            border-radius: 4px; 
-            border: none; 
-            font-weight: bold; 
-        }
+        button { cursor: pointer; padding: 6px 12px; border-radius: 4px; border: none; font-weight: bold; }
         .edit-btn { background: var(--edit); color: white; }
         .del-btn { background: var(--del); color: white; }
-        .add-btn { 
-            background: var(--accent); 
-            color: #fff; 
-            width: 100%; 
-            margin-top: 8px; 
-            padding: 10px; 
-        }
-        .rating-box { 
-            display: flex; 
-            gap: 6px; 
-            cursor: pointer; 
-        }
-        .rating-badge { 
-            padding: 2px 8px; 
-            border-radius: 10px; 
-            font-size: 12px; 
-            border: 1px solid #444; 
-            background: #2a2535; 
-        }
+        .add-btn { background: var(--accent); color: #fff; width: 100%; margin-top: 8px; padding: 10px; }
+        .rating-box { display: flex; gap: 6px; cursor: pointer; }
+        .rating-badge { padding: 2px 8px; border-radius: 10px; font-size: 12px; border: 1px solid #444; background: #2a2535; }
         .rating-badge.p1 { color: #81c784; }
         .rating-badge.p2 { color: #ff80ab; }
-        .comment-text { 
-            font-size: 12px; 
-            color: #aaa; 
-            font-style: italic; 
-            margin: 6px 0 0 28px; 
-        }
+        .comment-text { font-size: 12px; color: #aaa; font-style: italic; margin: 6px 0 0 28px; }
     </style>
 </head>
 <body>
@@ -123,6 +68,14 @@
             Цвет 2: <input type="color" id="bg2Picker" onchange="updateColors()">
             Градус: <input type="number" id="degInput" min="0" max="360" value="135" onchange="updateColors()">
             Акцент: <input type="color" id="accentPicker" onchange="updateColors()">
+            <br>
+            Сортировка: 
+            <select id="sortSelect" onchange="renderApp()">
+                <option value="default">По порядку добавления</option>
+                <option value="avg-desc">По среднему баллу ↓</option>
+                <option value="p1-desc">По оценке Юрочки ↓</option>
+                <option value="p2-desc">По оценке Ксю ↓</option>
+            </select>
         </div>
         <div class="search-panel">
             <input type="text" id="search" placeholder="🔍 Поиск..." oninput="debouncedRender()">
@@ -161,8 +114,8 @@
             return {
                 name: item.name,
                 watched: item.watched ?? false,
-                p1: item.p1 ?? null,
-                p2: item.p2 ?? null,
+                p1: item.p1 != null ? Number(item.p1) : null,
+                p2: item.p2 != null ? Number(item.p2) : null,
                 comment: item.comment ?? ""
             };
         }
@@ -170,10 +123,22 @@
         function getCategoryAvg(list) {
             let sum = 0, count = 0;
             for (const i of list) {
-                if (i.p1 != null) { sum += i.p1; count++; }
-                if (i.p2 != null) { sum += i.p2; count++; }
+                if (typeof i.p1 === 'number' && !isNaN(i.p1)) { sum += i.p1; count++; }
+                if (typeof i.p2 === 'number' && !isNaN(i.p2)) { sum += i.p2; count++; }
             }
             return count > 0 ? (sum / count).toFixed(1) : null;
+        }
+
+        function getSortValue(item, sortType) {
+            if (sortType === 'avg-desc') {
+                let sum = 0, count = 0;
+                if (item.p1 != null) { sum += item.p1; count++; }
+                if (item.p2 != null) { sum += item.p2; count++; }
+                return count > 0 ? sum / count : -1;
+            }
+            if (sortType === 'p1-desc') return item.p1 != null ? item.p1 : -1;
+            if (sortType === 'p2-desc') return item.p2 != null ? item.p2 : -1;
+            return 0;
         }
 
         function debouncedRender() {
@@ -185,6 +150,7 @@
             if (!cachedData) return;
 
             const query = document.getElementById('search').value.toLowerCase().trim();
+            const sortType = document.getElementById('sortSelect').value;
             const app = document.getElementById('app');
             app.innerHTML = '';
 
@@ -195,9 +161,8 @@
                 const rawList = cachedData[cat] || [];
                 const list = rawList.map(toObj);
 
-                // Убираем дубликаты + применяем поиск
                 const seen = new Set();
-                const uniqueList = [];
+                let uniqueList = [];
                 for (const item of list) {
                     const key = item.name.toLowerCase();
                     if (!seen.has(key)) {
@@ -206,6 +171,11 @@
                             uniqueList.push(item);
                         }
                     }
+                }
+
+                // Применяем сортировку
+                if (sortType !== 'default') {
+                    uniqueList.sort((a, b) => getSortValue(b, sortType) - getSortValue(a, sortType));
                 }
 
                 const avg = getCategoryAvg(uniqueList);
@@ -269,6 +239,7 @@
             });
         }
 
+        // Остальные функции (addItem, toggleWatched, editRating и т.д.)
         function addItem(cat) {
             const input = document.getElementById(`input-${cat}`);
             const val = input.value.trim();
