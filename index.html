@@ -10,15 +10,29 @@
         :root { --bg: #0d0a15; --card: #1a1525; --accent: #00e676; --edit: #448aff; --del: #ff5252; }
         body { margin: 0; padding: 20px; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; background-size: cover; background-position: center; background-attachment: fixed; transition: background 0.3s; }
         .container { max-width: 600px; margin: 0 auto; }
+        h1 { text-align: center; color: var(--accent); margin-bottom: 20px; }
+        
         .settings-panel { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; }
         input[type="text"] { padding: 10px; border-radius: 6px; border: none; background: #2a2535; color: white; width: 100%; box-sizing: border-box; }
-        h1 { text-align: center; color: var(--accent); }
+        
         .category-block { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; }
+        
+        /* Заголовок категории с flex-распределением для рейтинга */
+        .category-header { 
+            display: flex; justify-content: space-between; align-items: center; 
+            border-bottom: 2px solid var(--accent); padding-bottom: 5px; color: var(--accent); margin-top: 0; 
+        }
+        .cat-rating { 
+            font-size: 14px; background: rgba(0, 230, 118, 0.15); 
+            padding: 2px 8px; border-radius: 6px; border: 1px solid var(--accent); color: #fff;
+        }
+
         .item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333; gap: 10px; flex-wrap: wrap; }
         .item-main { display: flex; align-items: center; gap: 10px; flex-grow: 1; }
         .item-info { display: flex; flex-direction: column; }
         .comment-text { font-size: 11px; color: #aaa; font-style: italic; margin-top: 2px; }
         .watched { text-decoration: line-through; opacity: 0.6; }
+        
         .rating-badge { cursor: pointer; padding: 4px 8px; border-radius: 6px; font-size: 12px; background: #2a2535; border: 1px solid #444; text-align: center; }
         .btn-group { display: flex; gap: 5px; }
         button { cursor: pointer; padding: 5px 10px; border-radius: 4px; border: none; font-weight: bold; }
@@ -27,7 +41,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>WATCHLIST WITH MY Ksu</h1>
+        <h1>WATCHLIST</h1>
         <div class="settings-panel">
             <input type="text" id="bgInput" placeholder="Цвет (#000), градиент или URL фото">
             <button onclick="updateBg()" style="background: var(--edit); color: white;">Применить фон</button>
@@ -60,14 +74,36 @@
             return typeof item === 'string' ? { name: item, watched: false, rating: null } : item;
         }
 
+        // Логика расчета рейтинга категории
+        function getCategoryAverage(list) {
+            let sum = 0, count = 0;
+            list.forEach(o => {
+                if (o.rating && (o.rating.me > 0 || o.rating.gf > 0)) {
+                    // Считаем среднее между оценками (если одна из них 0, берем другую)
+                    const me = o.rating.me || 0;
+                    const gf = o.rating.gf || 0;
+                    const avg = (me > 0 && gf > 0) ? (me + gf) / 2 : (me + gf);
+                    sum += avg;
+                    count++;
+                }
+            });
+            return count > 0 ? (sum / count).toFixed(1) : null;
+        }
+
         function renderApp() {
             const app = document.getElementById('app');
             app.innerHTML = '';
             ["Фильмы", "Аниме", "Сериалы"].forEach(cat => {
                 const list = (cachedData[cat] || []).map(toObj);
+                const avg = getCategoryAverage(list); // Расчет для заголовка
+                
                 const section = document.createElement('div');
                 section.className = 'category-block';
-                section.innerHTML = `<h2>${cat}</h2>` + list.map((obj, idx) => `
+                section.innerHTML = `
+                    <h2 class="category-header">
+                        <span>${cat}</span>
+                        ${avg ? `<span class="cat-rating">★ ${avg}/10</span>` : ''}
+                    </h2>` + list.map((obj, idx) => `
                     <div class="item">
                         <div class="item-main">
                             <input type="checkbox" ${obj.watched ? 'checked' : ''} onchange="toggleWatched('${cat}', ${idx})">
