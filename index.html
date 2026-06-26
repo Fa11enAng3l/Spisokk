@@ -1,4 +1,6 @@
-<!DOCTYPE html>
+✅ Исправлено! Проблема была в расчёте общего среднего балла (когда ещё нет ни одной оценки — получался NaN).
+Вот обновлённая версия с исправленной статистикой:
+HTML<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -27,24 +29,11 @@
         }
         .settings-panel, .search-panel { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         input[type="color"], input[type="number"], select { border: none; width: 50px; height: 40px; cursor: pointer; }
-        input[type="text"], select { 
-            padding: 10px; border-radius: 6px; border: none; 
-            background: #2a2535; color: white; 
-        }
+        input[type="text"], select { padding: 10px; border-radius: 6px; border: none; background: #2a2535; color: white; }
         h1 { text-align: center; color: var(--accent); }
-        .category-block { 
-            background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; 
-            margin-bottom: 20px; backdrop-filter: blur(5px); 
-        }
-        h2 { 
-            border-bottom: 2px solid var(--accent); padding-bottom: 5px; color: var(--accent); 
-            margin: 0 0 12px 0; display: flex; justify-content: space-between; align-items: center; 
-        }
-        .avg-badge { 
-            font-size: 13px; font-weight: normal; 
-            background: rgba(0,0,0,0.3); padding: 3px 10px; 
-            border-radius: 20px; color: #ffd700; border: 1px solid #444; 
-        }
+        .category-block { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 20px; backdrop-filter: blur(5px); }
+        h2 { border-bottom: 2px solid var(--accent); padding-bottom: 5px; color: var(--accent); margin: 0 0 12px 0; display: flex; justify-content: space-between; align-items: center; }
+        .avg-badge { font-size: 13px; font-weight: normal; background: rgba(0,0,0,0.3); padding: 3px 10px; border-radius: 20px; color: #ffd700; border: 1px solid #444; }
         .item { padding: 12px 0; border-bottom: 1px solid #333; }
         .item-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
         .item-info { display: flex; align-items: center; gap: 10px; flex-grow: 1; }
@@ -66,9 +55,8 @@
     <div class="container">
         <h1>WATCHLIST ЮРОЧКИ И ЛЮБИМОЙ КСЮ ❤️</h1>
         
-        <!-- Статистика -->
         <div class="stats-panel" id="statsPanel">
-            <h2 style="margin-top:0;">📊 Статистика</h2>
+            <h2 style="margin-top:0; color:#00ff9d;">📊 Статистика</h2>
             <div id="statsContent">Загрузка статистики...</div>
         </div>
 
@@ -138,40 +126,24 @@
             return count > 0 ? (sum / count).toFixed(1) : null;
         }
 
-        function getSortValue(item, sortType) {
-            if (sortType === 'avg-desc') {
-                let sum = 0, count = 0;
-                if (item.p1 != null) { sum += item.p1; count++; }
-                if (item.p2 != null) { sum += item.p2; count++; }
-                return count > 0 ? sum / count : -1;
-            }
-            if (sortType === 'p1-desc') return item.p1 != null ? item.p1 : -1;
-            if (sortType === 'p2-desc') return item.p2 != null ? item.p2 : -1;
-            return 0;
-        }
-
-        function debouncedRender() {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => { renderApp(); updateStats(); }, 280);
-        }
-
         function updateStats() {
             if (!cachedData) return;
+
             let total = 0, watched = 0, withComment = 0, sumAll = 0, countAll = 0;
+            let html = '';
 
             const categories = ["Фильмы", "Аниме", "Сериалы"];
-            let html = '';
 
             categories.forEach(cat => {
                 const list = (cachedData[cat] || []).map(toObj);
                 const catTotal = list.length;
                 const catWatched = list.filter(i => i.watched).length;
-                const catComments = list.filter(i => i.comment.trim()).length;
+                const catComments = list.filter(i => i.comment && i.comment.trim()).length;
 
                 let catSum = 0, catCount = 0;
                 list.forEach(i => {
-                    if (i.p1 != null) { catSum += i.p1; catCount++; }
-                    if (i.p2 != null) { catSum += i.p2; catCount++; }
+                    if (i.p1 != null && !isNaN(i.p1)) { catSum += i.p1; catCount++; }
+                    if (i.p2 != null && !isNaN(i.p2)) { catSum += i.p2; catCount++; }
                 });
 
                 total += catTotal;
@@ -180,26 +152,26 @@
                 sumAll += catSum;
                 countAll += catCount;
 
-                html += `
-                    <div class="stat-row">
-                        <span><strong>${cat}:</strong></span>
-                        <span>${catWatched}/${catTotal} просмотрено • ${catComments} с комментариями</span>
-                    </div>`;
+                html += `<div class="stat-row"><span><strong>${cat}:</strong></span> <span>${catWatched}/${catTotal} просмотрено • ${catComments} с комментариями</span></div>`;
             });
 
             const globalAvg = countAll > 0 ? (sumAll / countAll).toFixed(1) : '—';
 
             document.getElementById('statsContent').innerHTML = `
                 <div class="stat-row"><strong>Всего тайтлов:</strong> <span>${total}</span></div>
-                <div class="stat-row"><strong>Просмотрено:</strong> <span>${watched} (${total ? ((watched/total)*100).toFixed(0) : 0}%)</span></div>
+                <div class="stat-row"><strong>Просмотрено:</strong> <span>${watched} (${total ? Math.round(watched/total*100) : 0}%)</span></div>
                 <div class="stat-row"><strong>Общий средний балл:</strong> <span>${globalAvg}</span></div>
                 <div class="stat-row"><strong>С комментариями:</strong> <span>${withComment}</span></div>
-                <hr style="border-color:#444;margin:8px 0;">
+                <hr style="border-color:#444; margin:10px 0;">
                 ${html}
             `;
         }
 
-        // renderApp, applyColors, updateColors, addItem, toggleWatched и т.д. — остались те же
+        function debouncedRender() {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => { renderApp(); updateStats(); }, 280);
+        }
+
         function renderApp() {
             if (!cachedData) return;
             const query = document.getElementById('search').value.toLowerCase().trim();
@@ -256,12 +228,22 @@
                         </div>`;
                 }
 
-                html += `<input type="text" id="input-${cat}" placeholder="Добавить новое...">
-                         <button class="add-btn" onclick="addItem('${cat}')">Добавить</button>`;
-
+                html += `<input type="text" id="input-${cat}" placeholder="Добавить новое..."><button class="add-btn" onclick="addItem('${cat}')">Добавить</button>`;
                 section.innerHTML = html;
                 app.appendChild(section);
             });
+        }
+
+        function getSortValue(item, sortType) {
+            if (sortType === 'avg-desc') {
+                let sum = 0, count = 0;
+                if (item.p1 != null) { sum += item.p1; count++; }
+                if (item.p2 != null) { sum += item.p2; count++; }
+                return count > 0 ? sum / count : -1;
+            }
+            if (sortType === 'p1-desc') return item.p1 != null ? item.p1 : -1;
+            if (sortType === 'p2-desc') return item.p2 != null ? item.p2 : -1;
+            return 0;
         }
 
         function applyColors(bg1 = '#0d0a15', bg2 = '#1a1525', deg = 135, accent = '#ff6b9d') {
