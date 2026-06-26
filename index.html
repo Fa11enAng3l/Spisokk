@@ -21,11 +21,12 @@
             color: #fff; transition: background 0.5s;
         }
         .container { max-width: 600px; margin: 0 auto; }
-        .settings-panel, .search-panel { 
+        .stats-panel, .settings-panel, .search-panel { 
             background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; 
-            margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+            margin-bottom: 20px; 
         }
-        input[type="color"], input[type="number"] { border: none; width: 50px; height: 40px; cursor: pointer; }
+        .settings-panel, .search-panel { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        input[type="color"], input[type="number"], select { border: none; width: 50px; height: 40px; cursor: pointer; }
         input[type="text"], select { 
             padding: 10px; border-radius: 6px; border: none; 
             background: #2a2535; color: white; 
@@ -57,26 +58,35 @@
         .rating-badge.p1 { color: #81c784; }
         .rating-badge.p2 { color: #ff80ab; }
         .comment-text { font-size: 12px; color: #aaa; font-style: italic; margin: 6px 0 0 28px; }
+        .stat-row { display: flex; justify-content: space-between; margin: 6px 0; }
+        .stat-label { color: #bbb; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>WATCHLIST ЮРОЧКИ И ЛЮБИМОЙ КСЮ ❤️</h1>
         
+        <!-- Статистика -->
+        <div class="stats-panel" id="statsPanel">
+            <h2 style="margin-top:0;">📊 Статистика</h2>
+            <div id="statsContent">Загрузка статистики...</div>
+        </div>
+
         <div class="settings-panel">
             Цвет 1: <input type="color" id="bg1Picker" onchange="updateColors()">
             Цвет 2: <input type="color" id="bg2Picker" onchange="updateColors()">
             Градус: <input type="number" id="degInput" min="0" max="360" value="135" onchange="updateColors()">
             Акцент: <input type="color" id="accentPicker" onchange="updateColors()">
-            <br>
+            <br><br>
             Сортировка: 
             <select id="sortSelect" onchange="renderApp()">
-                <option value="default">По порядку добавления</option>
-                <option value="avg-desc">По среднему баллу ↓</option>
-                <option value="p1-desc">По оценке Юрочки ↓</option>
-                <option value="p2-desc">По оценке Ксю ↓</option>
+                <option value="default">По порядку</option>
+                <option value="avg-desc">По среднему ↓</option>
+                <option value="p1-desc">Юрочка ↓</option>
+                <option value="p2-desc">Ксю ↓</option>
             </select>
         </div>
+
         <div class="search-panel">
             <input type="text" id="search" placeholder="🔍 Поиск..." oninput="debouncedRender()">
         </div>
@@ -104,13 +114,12 @@
             if (doc.exists) {
                 cachedData = doc.data();
                 renderApp();
+                updateStats();
             }
         });
 
         function toObj(item) {
-            if (typeof item === 'string') {
-                return { name: item, watched: false, p1: null, p2: null, comment: "" };
-            }
+            if (typeof item === 'string') return { name: item, watched: false, p1: null, p2: null, comment: "" };
             return {
                 name: item.name,
                 watched: item.watched ?? false,
@@ -143,12 +152,56 @@
 
         function debouncedRender() {
             clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(renderApp, 280);
+            debounceTimer = setTimeout(() => { renderApp(); updateStats(); }, 280);
         }
 
+        function updateStats() {
+            if (!cachedData) return;
+            let total = 0, watched = 0, withComment = 0, sumAll = 0, countAll = 0;
+
+            const categories = ["Фильмы", "Аниме", "Сериалы"];
+            let html = '';
+
+            categories.forEach(cat => {
+                const list = (cachedData[cat] || []).map(toObj);
+                const catTotal = list.length;
+                const catWatched = list.filter(i => i.watched).length;
+                const catComments = list.filter(i => i.comment.trim()).length;
+
+                let catSum = 0, catCount = 0;
+                list.forEach(i => {
+                    if (i.p1 != null) { catSum += i.p1; catCount++; }
+                    if (i.p2 != null) { catSum += i.p2; catCount++; }
+                });
+
+                total += catTotal;
+                watched += catWatched;
+                withComment += catComments;
+                sumAll += catSum;
+                countAll += catCount;
+
+                html += `
+                    <div class="stat-row">
+                        <span><strong>${cat}:</strong></span>
+                        <span>${catWatched}/${catTotal} просмотрено • ${catComments} с комментариями</span>
+                    </div>`;
+            });
+
+            const globalAvg = countAll > 0 ? (sumAll / countAll).toFixed(1) : '—';
+
+            document.getElementById('statsContent').innerHTML = `
+                <div class="stat-row"><strong>Всего тайтлов:</strong> <span>${total}</span></div>
+                <div class="stat-row"><strong>Просмотрено:</strong> <span>${watched} (${total ? ((watched/total)*100).toFixed(0) : 0}%)</span></div>
+                <div class="stat-row"><strong>Общий средний балл:</strong> <span>${globalAvg}</span></div>
+                <div class="stat-row"><strong>С комментариями:</strong> <span>${withComment}</span></div>
+                <hr style="border-color:#444;margin:8px 0;">
+                ${html}
+            `;
+        }
+
+        // renderApp, applyColors, updateColors, addItem, toggleWatched и т.д. — остались те же
         function renderApp() {
             if (!cachedData) return;
-
             const query = document.getElementById('search').value.toLowerCase().trim();
             const sortType = document.getElementById('sortSelect').value;
             const app = document.getElementById('app');
@@ -167,13 +220,10 @@
                     const key = item.name.toLowerCase();
                     if (!seen.has(key)) {
                         seen.add(key);
-                        if (item.name.toLowerCase().includes(query)) {
-                            uniqueList.push(item);
-                        }
+                        if (item.name.toLowerCase().includes(query)) uniqueList.push(item);
                     }
                 }
 
-                // Применяем сортировку
                 if (sortType !== 'default') {
                     uniqueList.sort((a, b) => getSortValue(b, sortType) - getSortValue(a, sortType));
                 }
@@ -190,8 +240,7 @@
                         <div class="item">
                             <div class="item-row">
                                 <div class="item-info">
-                                    <input type="checkbox" ${obj.watched ? 'checked' : ''} 
-                                           onchange="toggleWatched('${cat}', '${escapedName}')">
+                                    <input type="checkbox" ${obj.watched ? 'checked' : ''} onchange="toggleWatched('${cat}', '${escapedName}')">
                                     <span class="${obj.watched ? 'watched' : ''}">${obj.name}</span>
                                 </div>
                                 <div class="rating-box" onclick="editRating('${cat}', '${escapedName}')">
@@ -207,9 +256,8 @@
                         </div>`;
                 }
 
-                html += `
-                    <input type="text" id="input-${cat}" placeholder="Добавить новое...">
-                    <button class="add-btn" onclick="addItem('${cat}')">Добавить</button>`;
+                html += `<input type="text" id="input-${cat}" placeholder="Добавить новое...">
+                         <button class="add-btn" onclick="addItem('${cat}')">Добавить</button>`;
 
                 section.innerHTML = html;
                 app.appendChild(section);
@@ -239,23 +287,15 @@
             });
         }
 
-        // Остальные функции (addItem, toggleWatched, editRating и т.д.)
         function addItem(cat) {
             const input = document.getElementById(`input-${cat}`);
             const val = input.value.trim();
             if (!val) return;
-
-            const exists = (cachedData[cat] || []).some(i => toObj(i).name.toLowerCase() === val.toLowerCase());
-            if (exists) {
+            if ((cachedData[cat] || []).some(i => toObj(i).name.toLowerCase() === val.toLowerCase())) {
                 alert("Это уже есть в списке!");
                 return;
             }
-
-            docRef.update({
-                [cat]: firebase.firestore.FieldValue.arrayUnion({
-                    name: val, watched: false, p1: null, p2: null, comment: ""
-                })
-            });
+            docRef.update({ [cat]: firebase.firestore.FieldValue.arrayUnion({ name: val, watched: false, p1: null, p2: null, comment: "" }) });
             input.value = '';
         }
 
@@ -272,7 +312,6 @@
             const list = (cachedData[cat] || []).map(toObj);
             const item = list.find(i => i.name === name);
             if (!item) return;
-
             const p1 = prompt("Оценка Юрочки (0-10):", item.p1 || "");
             if (p1 === null) return;
             const p2 = prompt("Оценка любимой Ксю (0-10):", item.p2 || "");
@@ -283,7 +322,6 @@
             item.p1 = p1.trim() ? parseFloat(p1.replace(',', '.')) : null;
             item.p2 = p2.trim() ? parseFloat(p2.replace(',', '.')) : null;
             item.comment = comment.trim();
-
             docRef.update({ [cat]: list });
         }
 
@@ -295,7 +333,6 @@
         function editItem(cat, oldName) {
             const newVal = prompt("Изменить название:", oldName);
             if (!newVal || newVal === oldName) return;
-
             const list = (cachedData[cat] || []).map(toObj);
             const item = list.find(i => i.name === oldName);
             if (item) {
