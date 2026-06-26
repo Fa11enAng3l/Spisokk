@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WatchList с ненаглядной</title>
+    <title>WatchList для двоих</title>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <style>
         :root { --bg1: #0d0a15; --bg2: #1a1525; --accent: #ff6b9d; --edit: #448aff; --del: #ff5252; }
         body { margin: 0; padding: 20px; font-family: 'Segoe UI', sans-serif; min-height: 100vh;
-               background: linear-gradient(135deg, var(--bg1), var(--bg2)); color: #fff; transition: background 0.3s; }
+               background: linear-gradient(135deg, var(--bg1), var(--bg2)); color: #fff; }
         .container { max-width: 600px; margin: 0 auto; }
         .settings-panel, .search-panel { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; justify-content: center; }
         input[type="color"] { border: none; width: 40px; height: 40px; cursor: pointer; background: none; }
@@ -17,7 +17,7 @@
         h1 { text-align: center; color: var(--accent); }
         .category-block { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 20px; backdrop-filter: blur(5px); }
         h2 { border-bottom: 2px solid var(--accent); padding-bottom: 5px; color: var(--accent); margin: 0 0 12px 0; display: flex; justify-content: space-between; align-items: center; }
-        .avg-badge { font-size: 13px; font-weight: normal; background: rgba(0,0,0,0.3); padding: 3px 10px; border-radius: 20px; color: #ffd700; }
+        .avg-badge { font-size: 13px; font-weight: normal; background: rgba(0,0,0,0.3); padding: 3px 10px; border-radius: 20px; color: #ffd700; border: 1px solid #444; }
         .item { display: flex; flex-direction: column; padding: 10px 0; border-bottom: 1px solid #333; gap: 8px; }
         .item-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
         .item-info { display: flex; align-items: center; gap: 10px; flex-grow: 1; min-width: 0; }
@@ -36,7 +36,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>WATCHLIST WITH MY Ksu</h1>
+        <h1>WATCHLIST НА ДВОИХ</h1>
         <div class="settings-panel">
             Фон: <input type="color" id="bg1Picker" onchange="updateColors()">
             <input type="color" id="bg2Picker" onchange="updateColors()">
@@ -75,16 +75,17 @@
             };
         }
 
-        // Расчет среднего арифметического категории
+        // Надежный расчет среднего
         function getCategoryAvg(list) {
-            const ratings = [];
+            let sum = 0;
+            let count = 0;
             list.forEach(i => {
-                if (i.p1 !== null) ratings.push(i.p1);
-                if (i.p2 !== null) ratings.push(i.p2);
+                const v1 = parseFloat(i.p1);
+                const v2 = parseFloat(i.p2);
+                if (!isNaN(v1)) { sum += v1; count++; }
+                if (!isNaN(v2)) { sum += v2; count++; }
             });
-            if (ratings.length === 0) return null;
-            const sum = ratings.reduce((a, b) => a + b, 0);
-            return (sum / ratings.length).toFixed(1);
+            return count > 0 ? (sum / count).toFixed(1) : null;
         }
 
         function renderApp() {
@@ -97,28 +98,40 @@
             applyColors(cfg.bg1 || '#0d0a15', cfg.bg2 || '#1a1525', cfg.accent || '#ff6b9d');
 
             ["Фильмы", "Аниме", "Сериалы"].forEach(cat => {
-                const list = (cachedData[cat] || []).map(toObj);
-                const avg = getCategoryAvg(list);
+                const rawList = cachedData[cat] || [];
+                
+                // Удаление дубликатов на лету
+                const uniqueList = [];
+                const seen = new Set();
+                rawList.forEach(item => {
+                    const obj = toObj(item);
+                    if (!seen.has(obj.name.toLowerCase())) {
+                        uniqueList.push(obj);
+                        seen.add(obj.name.toLowerCase());
+                    }
+                });
+
+                const avg = getCategoryAvg(uniqueList);
                 
                 const section = document.createElement('div');
                 section.className = 'category-block';
                 section.innerHTML = `<h2>${cat} ${avg ? `<span class="avg-badge">Общий балл: ${avg}</span>` : ''}</h2>` + 
-                list.map((obj, idx) => {
+                uniqueList.map((obj, idx) => {
                     if (!obj.name.toLowerCase().includes(query)) return '';
                     return `
                         <div class="item">
                             <div class="item-row">
                                 <div class="item-info">
-                                    <input type="checkbox" ${obj.watched ? 'checked' : ''} onchange="toggleWatched('${cat}', ${idx})">
+                                    <input type="checkbox" ${obj.watched ? 'checked' : ''} onchange="toggleWatched('${cat}', '${obj.name}')">
                                     <span class="${obj.watched ? 'watched' : ''}">${obj.name}</span>
                                 </div>
-                                <div class="rating-box" onclick="editRating('${cat}', ${idx})">
+                                <div class="rating-box" onclick="editRating('${cat}', '${obj.name}')">
                                     <span class="rating-badge p1" title="Твоя оценка">Я: ${obj.p1 ?? '-'}</span>
                                     <span class="rating-badge p2" title="Оценка ненаглядной">Она: ${obj.p2 ?? '-'}</span>
                                 </div>
                                 <div class="btn-group">
-                                    <button class="edit-btn" onclick="editItem('${cat}', ${idx}, '${obj.name.replace(/'/g, "\\'")}')">✎</button>
-                                    <button class="del-btn" onclick="deleteItem('${cat}', ${idx})">✕</button>
+                                    <button class="edit-btn" onclick="editItem('${cat}', '${obj.name}')">✎</button>
+                                    <button class="del-btn" onclick="deleteItem('${cat}', '${obj.name}')">✕</button>
                                 </div>
                             </div>
                             ${obj.comment ? `<div class="comment-text">💬 ${obj.comment}</div>` : ''}
@@ -128,8 +141,12 @@
             });
         }
 
-        function editRating(cat, idx) {
-            const item = toObj(cachedData[cat][idx]);
+        // Функции работают теперь по имени (так надежнее при фильтрации дублей)
+        function editRating(cat, name) {
+            const list = cachedData[cat].map(toObj);
+            const item = list.find(i => i.name === name);
+            if(!item) return;
+
             const p1 = prompt("Твоя оценка (0-10):", item.p1 || "");
             if (p1 === null) return;
             const p2 = prompt("Оценка моей ненаглядной (0-10):", item.p2 || "");
@@ -137,21 +154,19 @@
             const comment = prompt("Комментарий:", item.comment || "");
             if (comment === null) return;
 
-            const list = cachedData[cat].map(toObj);
-            list[idx].p1 = p1.trim() ? parseFloat(p1.replace(',', '.')) : null;
-            list[idx].p2 = p2.trim() ? parseFloat(p2.replace(',', '.')) : null;
-            list[idx].comment = comment.trim();
+            item.p1 = p1.trim() ? parseFloat(p1.replace(',', '.')) : null;
+            item.p2 = p2.trim() ? parseFloat(p2.replace(',', '.')) : null;
+            item.comment = comment.trim();
             
             db.collection("watchlist").doc("myList").update({ [cat]: list });
         }
 
         function addItem(cat) {
-            const val = document.getElementById(`input-${cat}`).value.trim();
+            const input = document.getElementById(`input-${cat}`);
+            const val = input.value.trim();
             if (!val) return;
             
-            // Проверка на наличие дубликата
-            const exists = cachedData[cat].some(i => i.name.toLowerCase() === val.toLowerCase());
-            if (exists) {
+            if (cachedData[cat].some(i => i.name.toLowerCase() === val.toLowerCase())) {
                 alert("Это уже есть в списке!");
                 return;
             }
@@ -160,10 +175,34 @@
             db.collection("watchlist").doc("myList").update({
                 [cat]: firebase.firestore.FieldValue.arrayUnion(newItem)
             });
-            document.getElementById(`input-${cat}`).value = '';
+            input.value = '';
         }
 
-        // ... остальные функции (applyColors, updateColors, toggleWatched, deleteItem, editItem) остаются без изменений ...
+        function toggleWatched(cat, name) {
+            const list = cachedData[cat].map(toObj);
+            const item = list.find(i => i.name === name);
+            if(item) {
+                item.watched = !item.watched;
+                db.collection("watchlist").doc("myList").update({ [cat]: list });
+            }
+        }
+
+        function deleteItem(cat, name) {
+            const list = cachedData[cat].map(toObj).filter(i => i.name !== name);
+            db.collection("watchlist").doc("myList").update({ [cat]: list });
+        }
+
+        function editItem(cat, oldName) {
+            const newVal = prompt("Изменить название:", oldName);
+            if (!newVal) return;
+            const list = cachedData[cat].map(toObj);
+            const item = list.find(i => i.name === oldName);
+            if(item) {
+                item.name = newVal;
+                db.collection("watchlist").doc("myList").update({ [cat]: list });
+            }
+        }
+
         function applyColors(bg1, bg2, accent) {
             document.documentElement.style.setProperty('--bg1', bg1);
             document.documentElement.style.setProperty('--bg2', bg2);
@@ -181,26 +220,6 @@
                     accent: document.getElementById('accentPicker').value
                 }
             });
-        }
-
-        function toggleWatched(cat, idx) {
-            const list = cachedData[cat].map(toObj);
-            list[idx].watched = !list[idx].watched;
-            db.collection("watchlist").doc("myList").update({ [cat]: list });
-        }
-
-        function deleteItem(cat, idx) {
-            const list = cachedData[cat].map(toObj);
-            list.splice(idx, 1);
-            db.collection("watchlist").doc("myList").update({ [cat]: list });
-        }
-
-        function editItem(cat, idx, oldVal) {
-            const newVal = prompt("Изменить название:", oldVal);
-            if (!newVal) return;
-            const list = cachedData[cat].map(toObj);
-            list[idx].name = newVal;
-            db.collection("watchlist").doc("myList").update({ [cat]: list });
         }
     </script>
 </body>
