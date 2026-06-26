@@ -7,17 +7,18 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <style>
-        :root { --bg: #0d0a15; --card: #1a1525; --accent: #00e676; --edit: #448aff; --del: #ff5252; }
-        body { margin: 0; padding: 20px; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; transition: background 0.3s; }
+        :root { --bg1: #0d0a15; --bg2: #1a1525; --accent: #00e676; --edit: #448aff; --del: #ff5252; }
+        body { margin: 0; padding: 20px; font-family: 'Segoe UI', sans-serif; min-height: 100vh;
+               background: linear-gradient(135deg, var(--bg1), var(--bg2)); color: #fff; transition: background 0.3s; }
         .container { max-width: 600px; margin: 0 auto; }
-        .settings-panel, .search-panel { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; justify-content: center; }
+        .settings-panel, .search-panel { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; gap: 10px; align-items: center; justify-content: center; }
         input[type="color"] { border: none; width: 40px; height: 40px; cursor: pointer; background: none; }
         input[type="text"] { padding: 10px; width: 100%; border-radius: 6px; border: none; background: #2a2535; color: white; }
         h1 { text-align: center; color: var(--accent); }
-        .category-block { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; }
+        .category-block { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-bottom: 20px; backdrop-filter: blur(5px); }
         h2 { border-bottom: 2px solid var(--accent); padding-bottom: 5px; color: var(--accent); margin: 0 0 12px 0; display: flex; justify-content: space-between; align-items: center; }
-        .avg-badge { font-size: 13px; font-weight: normal; background: #2a2535; padding: 3px 10px; border-radius: 20px; color: #ffd700; border: 1px solid #3a3a4a; }
-        .item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #333; gap: 8px; flex-wrap: wrap; }
+        .item { display: flex; flex-direction: column; padding: 10px 0; border-bottom: 1px solid #333; gap: 8px; }
+        .item-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
         .item-info { display: flex; align-items: center; gap: 10px; flex-grow: 1; min-width: 0; }
         .item-info span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .watched { text-decoration: line-through; opacity: 0.6; }
@@ -25,35 +26,26 @@
         button { cursor: pointer; padding: 5px 10px; border-radius: 4px; border: none; font-weight: bold; }
         .edit-btn { background: var(--edit); color: white; }
         .del-btn { background: var(--del); color: white; }
-        .add-btn { background: var(--accent); color: #000; width: 100%; margin-top: 5px; font-weight: bold; }
-        .rating-badge {
-            cursor: pointer;
-            padding: 3px 9px;
-            border-radius: 20px;
-            font-size: 13px;
-            white-space: nowrap;
-            border: 1px solid #3a3a4a;
-            background: #2a2535;
-            transition: background 0.2s, transform 0.1s;
-            user-select: none;
-            flex-shrink: 0;
-        }
-        .rating-badge:hover { background: #3a3545; transform: scale(1.05); }
-        .rating-badge.rated { color: #ffd700; }
-        .rating-badge.unrated { color: #555; }
+        .add-btn { background: var(--accent); color: #000; width: 100%; margin-top: 5px; }
+        .rating-box { display: flex; gap: 5px; cursor: pointer; }
+        .rating-badge { padding: 2px 8px; border-radius: 10px; font-size: 12px; border: 1px solid #444; background: #2a2535; }
+        .rating-badge.p1 { color: #81c784; }
+        .rating-badge.p2 { color: #64b5f6; }
+        .comment-text { font-size: 12px; color: #aaa; font-style: italic; margin-left: 30px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>WATCHLIST WITH MY GF</h1>
+        <h1>WATCHLIST PRO</h1>
         <div class="settings-panel">
-            Фон: <input type="color" id="bgPicker" onchange="updateColors()">
+            Фон: <input type="color" id="bg1Picker" onchange="updateColors()">
+            <input type="color" id="bg2Picker" onchange="updateColors()">
             Акцент: <input type="color" id="accentPicker" onchange="updateColors()">
         </div>
         <div class="search-panel">
-            <input type="text" id="search" placeholder="🔍 Поиск по названию..." oninput="renderApp()">
+            <input type="text" id="search" placeholder="🔍 Поиск..." oninput="renderApp()">
         </div>
-        <div id="app">Загрузка данных...</div>
+        <div id="app">Загрузка...</div>
     </div>
     <script>
         const firebaseConfig = {
@@ -72,16 +64,16 @@
             if (doc.exists) { cachedData = doc.data(); renderApp(); }
         });
 
+        // Функция конвертации с поддержкой старых данных (миграция на лету)
         function toObj(item) {
-            return typeof item === 'string'
-                ? { name: item, watched: false, rating: null }
-                : { name: item.name, watched: item.watched ?? false, rating: item.rating ?? null };
-        }
-
-        function getAvg(list) {
-            const rated = list.map(toObj).filter(o => o.rating !== null);
-            if (!rated.length) return null;
-            return (rated.reduce((s, o) => s + o.rating, 0) / rated.length).toFixed(1);
+            if (typeof item === 'string') return { name: item, watched: false, p1: null, p2: null, comment: "" };
+            return {
+                name: item.name,
+                watched: item.watched ?? false,
+                p1: item.p1 ?? (item.rating ?? null), // Поддержка старой оценки
+                p2: item.p2 ?? null,
+                comment: item.comment ?? ""
+            };
         }
 
         function renderApp() {
@@ -89,83 +81,70 @@
             const query = document.getElementById('search').value.toLowerCase();
             const app = document.getElementById('app');
             app.innerHTML = '';
-
-            applyColors(cachedData.settings?.bg || '#0d0a15', cachedData.settings?.accent || '#00e676');
+            
+            const cfg = cachedData.settings || {};
+            applyColors(cfg.bg1 || '#0d0a15', cfg.bg2 || '#1a1525', cfg.accent || '#00e676');
 
             ["Фильмы", "Аниме", "Сериалы"].forEach(cat => {
-                const list = cachedData[cat] || [];
-                const avg = getAvg(list);
+                const list = (cachedData[cat] || []).map(toObj);
                 const section = document.createElement('div');
                 section.className = 'category-block';
-
-                section.innerHTML =
-                    `<h2>${cat} ${avg !== null ? `<span class="avg-badge">⭐ ${avg} / 10</span>` : ''}</h2>` +
-                    list.map((item, idx) => {
-                        const obj = toObj(item);
-                        if (!obj.name.toLowerCase().includes(query)) return '';
-                        const hasRating = obj.rating !== null && obj.rating !== undefined;
-                        return `
+                section.innerHTML = `<h2>${cat}</h2>` + list.map((obj, idx) => {
+                    if (!obj.name.toLowerCase().includes(query)) return '';
+                    return `
                         <div class="item">
-                            <div class="item-info">
-                                <input type="checkbox" ${obj.watched ? 'checked' : ''} onchange="toggleWatched('${cat}', ${idx})">
-                                <span class="${obj.watched ? 'watched' : ''}">${idx + 1}. ${obj.name}</span>
+                            <div class="item-row">
+                                <div class="item-info">
+                                    <input type="checkbox" ${obj.watched ? 'checked' : ''} onchange="toggleWatched('${cat}', ${idx})">
+                                    <span class="${obj.watched ? 'watched' : ''}">${obj.name}</span>
+                                </div>
+                                <div class="rating-box" onclick="editRating('${cat}', ${idx})">
+                                    <span class="rating-badge p1">P1: ${obj.p1 ?? '-'}</span>
+                                    <span class="rating-badge p2">P2: ${obj.p2 ?? '-'}</span>
+                                </div>
+                                <div class="btn-group">
+                                    <button class="edit-btn" onclick="editItem('${cat}', ${idx}, '${obj.name.replace(/'/g, "\\'")}')">✎</button>
+                                    <button class="del-btn" onclick="deleteItem('${cat}', ${idx})">✕</button>
+                                </div>
                             </div>
-                            <span class="rating-badge ${hasRating ? 'rated' : 'unrated'}"
-                                  onclick="rateItem('${cat}', ${idx})"
-                                  title="Нажмите, чтобы поставить оценку">
-                                ${hasRating ? `⭐ ${obj.rating}/10` : '☆ —/10'}
-                            </span>
-                            <div class="btn-group">
-                                <button class="edit-btn" onclick="editItem('${cat}', ${idx}, '${obj.name.replace(/'/g, "\\'")}')">Изменить</button>
-                                <button class="del-btn" onclick="deleteItem('${cat}', ${idx})">Удалить</button>
-                            </div>
+                            ${obj.comment ? `<div class="comment-text">💬 ${obj.comment}</div>` : ''}
                         </div>`;
-                    }).join('') +
-                    `<input type="text" id="input-${cat}" placeholder="Добавить...">
-                     <button class="add-btn" onclick="addItem('${cat}')">Добавить</button>`;
-
+                }).join('') + `<input type="text" id="input-${cat}" placeholder="Добавить..."><button class="add-btn" onclick="addItem('${cat}')">Добавить</button>`;
                 app.appendChild(section);
             });
         }
 
-        function toggleWatched(cat, idx) {
+        function editRating(cat, idx) {
+            const item = toObj(cachedData[cat][idx]);
+            const p1 = prompt("Оценка P1 (0-10):", item.p1 || "");
+            if (p1 === null) return;
+            const p2 = prompt("Оценка P2 (0-10):", item.p2 || "");
+            if (p2 === null) return;
+            const comment = prompt("Комментарий:", item.comment || "");
+            if (comment === null) return;
+
             const list = cachedData[cat].map(toObj);
-            list[idx].watched = !list[idx].watched;
+            list[idx].p1 = p1.trim() ? parseFloat(p1.replace(',', '.')) : null;
+            list[idx].p2 = p2.trim() ? parseFloat(p2.replace(',', '.')) : null;
+            list[idx].comment = comment.trim();
+            
             db.collection("watchlist").doc("myList").update({ [cat]: list });
         }
 
-        function rateItem(cat, idx) {
-            const list = cachedData[cat].map(toObj);
-            const obj = list[idx];
-            const current = obj.rating !== null ? obj.rating : '';
-            const input = prompt(`Оценка для «${obj.name}» (0 – 10, оставьте пустым чтобы сбросить):`, current);
-            if (input === null) return;
-            if (input.trim() === '') {
-                obj.rating = null;
-            } else {
-                const parsed = parseFloat(input.replace(',', '.'));
-                if (isNaN(parsed) || parsed < 0 || parsed > 10) {
-                    alert('Введите число от 0 до 10');
-                    return;
-                }
-                obj.rating = Math.round(parsed * 10) / 10;
-            }
-            list[idx] = obj;
-            db.collection("watchlist").doc("myList").update({ [cat]: list });
-        }
-
-        function applyColors(bg, accent) {
-            document.documentElement.style.setProperty('--bg', bg);
-            document.documentElement.style.setProperty('--card', bg === '#0d0a15' ? '#1a1525' : '#222');
+        function applyColors(bg1, bg2, accent) {
+            document.documentElement.style.setProperty('--bg1', bg1);
+            document.documentElement.style.setProperty('--bg2', bg2);
             document.documentElement.style.setProperty('--accent', accent);
-            document.getElementById('bgPicker').value = bg;
+            document.getElementById('bg1Picker').value = bg1;
+            document.getElementById('bg2Picker').value = bg2;
             document.getElementById('accentPicker').value = accent;
         }
 
         function updateColors() {
             db.collection("watchlist").doc("myList").update({
                 settings: {
-                    bg: document.getElementById('bgPicker').value,
+                    bg1: document.getElementById('bg1Picker').value,
+                    bg2: document.getElementById('bg2Picker').value,
                     accent: document.getElementById('accentPicker').value
                 }
             });
@@ -174,10 +153,17 @@
         function addItem(cat) {
             const val = document.getElementById(`input-${cat}`).value.trim();
             if (!val) return;
+            const newItem = { name: val, watched: false, p1: null, p2: null, comment: "" };
             db.collection("watchlist").doc("myList").update({
-                [cat]: firebase.firestore.FieldValue.arrayUnion({ name: val, watched: false, rating: null })
+                [cat]: firebase.firestore.FieldValue.arrayUnion(newItem)
             });
             document.getElementById(`input-${cat}`).value = '';
+        }
+
+        function toggleWatched(cat, idx) {
+            const list = cachedData[cat].map(toObj);
+            list[idx].watched = !list[idx].watched;
+            db.collection("watchlist").doc("myList").update({ [cat]: list });
         }
 
         function deleteItem(cat, idx) {
