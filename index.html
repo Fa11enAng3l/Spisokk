@@ -7,24 +7,33 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <style>
-        :root { --bg: #0d0a15; --card: #1a1525; --accent: #00e676; --edit: #448aff; --del: #ff5252; }
-        body { margin: 0; padding: 20px; font-family: 'Segoe UI', sans-serif; background: var(--bg); color: #fff; background-size: cover; background-position: center; background-attachment: fixed; transition: background 0.3s; }
+        :root { --bg: #0d0a15; --card: #1a1525; --accent: #00e676; --edit: #448aff; --del: #ff5252; --star-color: #ffd700; --star-glow: rgba(255, 215, 0, 0.6); }
+        body { 
+            margin: 0; padding: 20px; font-family: 'Segoe UI', sans-serif; 
+            background: var(--bg); color: #fff; 
+            background-size: cover; background-position: center; background-attachment: fixed; 
+            transition: background 0.3s; 
+        }
         .container { max-width: 600px; margin: 0 auto; }
         h1 { text-align: center; color: var(--accent); margin-bottom: 20px; }
         
         .settings-panel { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; }
         input[type="text"] { padding: 10px; border-radius: 6px; border: none; background: #2a2535; color: white; width: 100%; box-sizing: border-box; }
         
-        .category-block { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; }
+        .category-block { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; }
         
-        /* Заголовок категории с flex-распределением для рейтинга */
+        /* Заголовок категории с желтым свечением звезды */
         .category-header { 
             display: flex; justify-content: space-between; align-items: center; 
             border-bottom: 2px solid var(--accent); padding-bottom: 5px; color: var(--accent); margin-top: 0; 
         }
         .cat-rating { 
-            font-size: 14px; background: rgba(0, 230, 118, 0.15); 
-            padding: 2px 8px; border-radius: 6px; border: 1px solid var(--accent); color: #fff;
+            font-size: 14px; 
+            background: rgba(255, 215, 0, 0.1); /* Легкий желтый фон */
+            padding: 2px 8px; border-radius: 6px; 
+            border: 1px solid var(--star-color); 
+            color: var(--star-color);
+            box-shadow: 0 0 5px var(--star-glow); /* Свечение звезды */
         }
 
         .item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #333; gap: 10px; flex-wrap: wrap; }
@@ -33,15 +42,37 @@
         .comment-text { font-size: 11px; color: #aaa; font-style: italic; margin-top: 2px; }
         .watched { text-decoration: line-through; opacity: 0.6; }
         
-        .rating-badge { cursor: pointer; padding: 4px 8px; border-radius: 6px; font-size: 12px; background: #2a2535; border: 1px solid #444; text-align: center; }
+        /* Плашка оценки с желтым свечением звезды */
+        .rating-badge { 
+            cursor: pointer; padding: 4px 8px; border-radius: 6px; font-size: 12px; 
+            background: #2a2535; 
+            border: 1px solid #444; 
+            text-align: center; 
+            transition: 0.2s;
+            display: inline-flex; align-items: center; gap: 4px; /* Для выравнивания иконки */
+        }
+        .rating-badge span { color: #888; transition: color 0.2s; } /* Цвет ★ по умолчанию */
+        
+        /* Стили для выставленной оценки */
+        .rating-badge.rated {
+            border-color: var(--star-color);
+            color: var(--star-color);
+            box-shadow: 0 0 5px var(--star-glow);
+        }
+        .rating-badge.rated span { color: var(--star-color); } /* Цвет ★ в выставленной оценке */
+
+        .rating-badge:hover span { color: var(--star-color); } /* Звезда загорается при наведении */
+        
         .btn-group { display: flex; gap: 5px; }
         button { cursor: pointer; padding: 5px 10px; border-radius: 4px; border: none; font-weight: bold; }
         .add-btn { background: var(--accent); color: #000; width: 100%; margin-top: 10px; }
+        .edit-btn { background: var(--edit); color: white; }
+        .del-btn { background: var(--del); color: white; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>WATCHLIST</h1>
+        <h1>WATCHLIST WITH MY Ksu</h1>
         <div class="settings-panel">
             <input type="text" id="bgInput" placeholder="Цвет (#000), градиент или URL фото">
             <button onclick="updateBg()" style="background: var(--edit); color: white;">Применить фон</button>
@@ -112,15 +143,25 @@
                                 ${obj.rating?.comment ? `<span class="comment-text">"${obj.rating.comment}"</span>` : ''}
                             </div>
                         </div>
-                        <div class="rating-badge" onclick="rateItem('${cat}', ${idx})">
-                            ${obj.rating ? `Я:${obj.rating.me || 0} | Она:${obj.rating.gf || 0}` : '☆ Оценить'}
+                        <div class="rating-badge ${obj.rating ? 'rated' : ''}" onclick="rateItem('${cat}', ${idx})">
+                            <span>★</span> ${obj.rating ? `Я:${obj.rating.me || 0} | Она:${obj.rating.gf || 0}` : 'Оценить'}
                         </div>
                         <div class="btn-group">
-                            <button onclick="deleteItem('${cat}', ${idx})" style="background:#ff5252; color:white">X</button>
+                            <button class="edit-btn" onclick="editItem('${cat}', ${idx})">✎</button>
+                            <button class="del-btn" onclick="deleteItem('${cat}', ${idx})">✕</button>
                         </div>
                     </div>`).join('') + `<input type="text" id="in-${cat}" placeholder="Добавить..."><button class="add-btn" onclick="addItem('${cat}')">Добавить</button>`;
                 app.appendChild(section);
             });
+        }
+
+        function editItem(cat, idx) {
+            const list = (cachedData[cat] || []).map(toObj);
+            const newName = prompt("Введите новое название:", list[idx].name);
+            if (newName !== null && newName.trim() !== "") {
+                list[idx].name = newName;
+                db.collection("watchlist").doc("myList").update({ [cat]: list });
+            }
         }
 
         function rateItem(cat, idx) {
@@ -132,7 +173,7 @@
             const comment = prompt("Комментарий:", r.comment);
             
             item.rating = { me: parseFloat(me) || 0, gf: parseFloat(gf) || 0, comment: comment || '' };
-            const list = cachedData[cat].map(toObj);
+            const list = (cachedData[cat] || []).map(toObj);
             list[idx] = item;
             db.collection("watchlist").doc("myList").update({ [cat]: list });
         }
@@ -143,7 +184,7 @@
         }
 
         function toggleWatched(cat, idx) {
-            const list = cachedData[cat].map(toObj);
+            const list = (cachedData[cat] || []).map(toObj);
             list[idx].watched = !list[idx].watched;
             db.collection("watchlist").doc("myList").update({ [cat]: list });
         }
@@ -155,7 +196,7 @@
         }
 
         function deleteItem(cat, idx) {
-            const list = cachedData[cat].map(toObj);
+            const list = (cachedData[cat] || []).map(toObj);
             list.splice(idx, 1);
             db.collection("watchlist").doc("myList").update({ [cat]: list });
         }
